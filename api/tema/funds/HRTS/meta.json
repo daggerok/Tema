@@ -1,0 +1,141 @@
+{
+  "generatedAt": "2026-10-01T21:47:59Z",
+  "ticker": "HRTS",
+  "name": "HRTS Heart & Health ETF",
+  "category": "Equity",
+  "categoryPath": "Thematic Equity",
+  "source": {
+    "fundPage": "https://temaetfs.com/hrts",
+    "catalog": "https://temaetfs.com/funds",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/HRTS-holdings-09302026.csv",
+    "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/HRTS",
+    "nportFiling": null,
+    "holdingsSource": "Tema official daily holdings CSV (2026-09-30)",
+    "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
+    "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
+  },
+  "identifiers": {
+    "cusip": "87975E883",
+    "isin": null,
+    "indexTicker": null
+  },
+  "inception": {
+    "fundInceptionDate": "Nov 20 2023",
+    "shareClassInceptionDate": null,
+    "exchange": "Nasdaq"
+  },
+  "expenseRatio": {
+    "display": "—",
+    "value": null,
+    "gross": null,
+    "net": null
+  },
+  "nav": {
+    "display": "$36.29",
+    "value": 36.29,
+    "asOfDate": "Sep 30 2026"
+  },
+  "marketPrice": {
+    "display": "$36.32",
+    "value": 36.32,
+    "asOfDate": "Sep 30 2026"
+  },
+  "premiumDiscount": {
+    "display": "0.08%",
+    "value": 0.08
+  },
+  "aum": {
+    "display": "$53,705,467",
+    "value": 53705467,
+    "asOfDate": "Sep 30 2026",
+    "source": "Tema official fund page"
+  },
+  "yields": {
+    "dividendYield": 1.32,
+    "dividendYieldText": "1.32%",
+    "dividendYieldKind": "Trailing 12-month Yahoo Finance chart distributions divided by latest market price",
+    "distributionRate": null,
+    "secYield": null,
+    "secYieldText": "—",
+    "secYieldKind": null,
+    "unsubsidizedSecYield": null
+  },
+  "returns": {
+    "derivedFrom": "Yahoo Finance adjusted-close total-return proxy; not official NAV total returns",
+    "monthEnd": {
+      "asOfDate": "Sep 30 2026",
+      "mo1": -3.53,
+      "qtd": 0.11,
+      "ytd": 2.89,
+      "yr1": 18.97,
+      "yr3": null,
+      "yr5": null,
+      "yr10": null,
+      "sinceInception": 12.58,
+      "mo1Text": "-3.53%",
+      "qtdText": "0.11%",
+      "ytdText": "2.89%",
+      "yr1Text": "18.97%",
+      "yr3Text": "—",
+      "yr5Text": "—",
+      "yr10Text": "—",
+      "sinceInceptionText": "12.58%"
+    },
+    "quarterEnd": {
+      "asOfDate": "Sep 30 2026",
+      "mo1": -3.53,
+      "qtd": 0.11,
+      "ytd": 2.89,
+      "yr1": 18.97,
+      "yr3": null,
+      "yr5": null,
+      "yr10": null,
+      "sinceInception": 12.58,
+      "mo1Text": "-3.53%",
+      "qtdText": "0.11%",
+      "ytdText": "2.89%",
+      "yr1Text": "18.97%",
+      "yr3Text": "—",
+      "yr5Text": "—",
+      "yr10Text": "—",
+      "sinceInceptionText": "12.58%"
+    }
+  },
+  "distributions": {
+    "frequency": "Unknown",
+    "paymentsPerYear": null,
+    "frequencyCode": null,
+    "headers": [
+      "Ex-Date",
+      "Amount"
+    ],
+    "rows": [
+      [
+        "12/11/2024",
+        "0.469"
+      ],
+      [
+        "12/10/2025",
+        "0.473"
+      ]
+    ]
+  },
+  "holdings": {
+    "pages": [
+      "holdings/001.json"
+    ],
+    "pageSize": 250,
+    "totalRows": 46,
+    "asOfDate": "2026-09-30",
+    "source": "Tema official daily holdings CSV (2026-09-30)"
+  },
+  "history": {
+    "pages": [
+      "history/001.json"
+    ],
+    "pageSize": 1000,
+    "totalRows": 717,
+    "asOfDate": "2026-10-01",
+    "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
+  }
+}

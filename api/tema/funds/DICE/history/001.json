@@ -1,0 +1,116 @@
+{
+  "ticker": "DICE",
+  "page": 1,
+  "pageSize": 1000,
+  "totalRows": 17,
+  "headers": [
+    "Date",
+    "NAV",
+    "Market Price",
+    "Premium/Discount"
+  ],
+  "rows": [
+    {
+      "Date": "Sep 09 2026",
+      "NAV": "",
+      "Market Price": "25.16",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Sep 10 2026",
+      "NAV": "",
+      "Market Price": "24.84",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Sep 11 2026",
+      "NAV": "",
+      "Market Price": "24.83",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Sep 14 2026",
+      "NAV": "",
+      "Market Price": "25.049999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Sep 15 2026",
+      "NAV": "",
+      "Market Price": "24.219999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Sep 16 2026",
+      "NAV": "",
+      "Market Price": "23.719999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Sep 17 2026",
+      "NAV": "",
+      "Market Price": "24.26",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Sep 18 2026",
+      "NAV": "",
+      "Market Price": "25.4",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Sep 21 2026",
+      "NAV": "",
+      "Market Price": "26.01",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Sep 22 2026",
+      "NAV": "",
+      "Market Price": "26.01",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Sep 23 2026",
+      "NAV": "",
+      "Market Price": "25.65",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Sep 24 2026",
+      "NAV": "",
+      "Market Price": "25.719999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Sep 25 2026",
+      "NAV": "",
+      "Market Price": "25.33",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Sep 28 2026",
+      "NAV": "",
+      "Market Price": "25",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Sep 29 2026",
+      "NAV": "",
+      "Market Price": "24.85",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Sep 30 2026",
+      "NAV": "",
+      "Market Price": "24.65",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 01 2026",
+      "NAV": "",
+      "Market Price": "24.580299",
+      "Premium/Discount": ""
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "generatedAt": "2026-10-01T21:47:52Z",
+  "ticker": "ARMY",
+  "name": "ARMY International Defense ETF",
+  "category": "Equity",
+  "categoryPath": "Thematic Equity",
+  "source": {
+    "fundPage": "https://temaetfs.com/army",
+    "catalog": "https://temaetfs.com/funds",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/ARMY-holdings-09302026.csv",
+    "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/ARMY",
+    "nportFiling": null,
+    "holdingsSource": "Tema official daily holdings CSV (2026-09-30)",
+    "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
+    "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
+  },
+  "identifiers": {
+    "cusip": "87975E784",
+    "isin": null,
+    "indexTicker": null
+  },
+  "inception": {
+    "fundInceptionDate": "Sep 25 2025",
+    "shareClassInceptionDate": null,
+    "exchange": "Nasdaq"
+  },
+  "expenseRatio": {
+    "display": "—",
+    "value": null,
+    "gross": null,
+    "net": null
+  },
+  "nav": {
+    "display": "$23.10",
+    "value": 23.1,
+    "asOfDate": "Sep 30 2026"
+  },
+  "marketPrice": {
+    "display": "$23.14",
+    "value": 23.14,
+    "asOfDate": "Sep 30 2026"
+  },
+  "premiumDiscount": {
+    "display": "0.17%",
+    "value": 0.17
+  },
+  "aum": {
+    "display": "$7,392,832",
+    "value": 7392832,
+    "asOfDate": "Sep 30 2026",
+    "source": "Tema official fund page"
+  },
+  "yields": {
+    "dividendYield": null,
+    "dividendYieldText": "—",
+    "dividendYieldKind": null,
+    "distributionRate": null,
+    "secYield": null,
+    "secYieldText": "—",
+    "secYieldKind": null,
+    "unsubsidizedSecYield": null
+  },
+  "returns": {
+    "derivedFrom": "Yahoo Finance adjusted-close total-return proxy; not official NAV total returns",
+    "monthEnd": {
+      "asOfDate": "Sep 30 2026",
+      "mo1": -9.61,
+      "qtd": -1.82,
+      "ytd": -2.94,
+      "yr1": -13.24,
+      "yr3": null,
+      "yr5": null,
+      "yr10": null,
+      "sinceInception": -8.97,
+      "mo1Text": "-9.61%",
+      "qtdText": "-1.82%",
+      "ytdText": "-2.94%",
+      "yr1Text": "-13.24%",
+      "yr3Text": "—",
+      "yr5Text": "—",
+      "yr10Text": "—",
+      "sinceInceptionText": "-8.97%"
+    },
+    "quarterEnd": {
+      "asOfDate": "Sep 30 2026",
+      "mo1": -9.61,
+      "qtd": -1.82,
+      "ytd": -2.94,
+      "yr1": -13.24,
+      "yr3": null,
+      "yr5": null,
+      "yr10": null,
+      "sinceInception": -8.97,
+      "mo1Text": "-9.61%",
+      "qtdText": "-1.82%",
+      "ytdText": "-2.94%",
+      "yr1Text": "-13.24%",
+      "yr3Text": "—",
+      "yr5Text": "—",
+      "yr10Text": "—",
+      "sinceInceptionText": "-8.97%"
+    }
+  },
+  "distributions": {
+    "frequency": "Unknown",
+    "paymentsPerYear": null,
+    "frequencyCode": null,
+    "headers": [
+      "Ex-Date",
+      "Amount"
+    ],
+    "rows": []
+  },
+  "holdings": {
+    "pages": [
+      "holdings/001.json"
+    ],
+    "pageSize": 250,
+    "totalRows": 35,
+    "asOfDate": "2026-09-30",
+    "source": "Tema official daily holdings CSV (2026-09-30)"
+  },
+  "history": {
+    "pages": [
+      "history/001.json"
+    ],
+    "pageSize": 1000,
+    "totalRows": 256,
+    "asOfDate": "2026-10-01",
+    "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "generatedAt": "2026-10-01T21:48:03Z",
+  "ticker": "TOLL",
+  "name": "TOLL Durable Quality ETF",
+  "category": "Equity",
+  "categoryPath": "Thematic Equity",
+  "source": {
+    "fundPage": "https://temaetfs.com/toll",
+    "catalog": "https://temaetfs.com/funds",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/TOLL-holdings-09302026.csv",
+    "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/TOLL",
+    "nportFiling": null,
+    "holdingsSource": "Tema official daily holdings CSV (2026-09-30)",
+    "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
+    "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
+  },
+  "identifiers": {
+    "cusip": "87975E107",
+    "isin": null,
+    "indexTicker": null
+  },
+  "inception": {
+    "fundInceptionDate": "May 10 2023",
+    "shareClassInceptionDate": null,
+    "exchange": "CBOE BZX Exchange"
+  },
+  "expenseRatio": {
+    "display": "0.55%",
+    "value": 0.55,
+    "gross": 0.55,
+    "net": null
+  },
+  "nav": {
+    "display": "$40.80",
+    "value": 40.8,
+    "asOfDate": "Sep 30 2026"
+  },
+  "marketPrice": {
+    "display": "$40.85",
+    "value": 40.85,
+    "asOfDate": "Sep 30 2026"
+  },
+  "premiumDiscount": {
+    "display": "0.10%",
+    "value": 0.1
+  },
+  "aum": {
+    "display": "$48,965,063",
+    "value": 48965063,
+    "asOfDate": "Sep 30 2026",
+    "source": "Tema official fund page"
+  },
+  "yields": {
+    "dividendYield": 0.28,
+    "dividendYieldText": "0.28%",
+    "dividendYieldKind": "Trailing 12-month Yahoo Finance chart distributions divided by latest market price",
+    "distributionRate": null,
+    "secYield": null,
+    "secYieldText": "—",
+    "secYieldKind": null,
+    "unsubsidizedSecYield": null
+  },
+  "returns": {
+    "derivedFrom": "Yahoo Finance adjusted-close total-return proxy; not official NAV total returns",
+    "monthEnd": {
+      "asOfDate": "Sep 30 2026",
+      "mo1": 3.29,
+      "qtd": -2.16,
+      "ytd": 15.99,
+      "yr1": 19.69,
+      "yr3": 19.22,
+      "yr5": null,
+      "yr10": null,
+      "sinceInception": 16.55,
+      "mo1Text": "3.29%",
+      "qtdText": "-2.16%",
+      "ytdText": "15.99%",
+      "yr1Text": "19.69%",
+      "yr3Text": "19.22%",
+      "yr5Text": "—",
+      "yr10Text": "—",
+      "sinceInceptionText": "16.55%"
+    },
+    "quarterEnd": {
+      "asOfDate": "Sep 30 2026",
+      "mo1": 3.29,
+      "qtd": -2.16,
+      "ytd": 15.99,
+      "yr1": 19.69,
+      "yr3": 19.22,
+      "yr5": null,
+      "yr10": null,
+      "sinceInception": 16.55,
+      "mo1Text": "3.29%",
+      "qtdText": "-2.16%",
+      "ytdText": "15.99%",
+      "yr1Text": "19.69%",
+      "yr3Text": "19.22%",
+      "yr5Text": "—",
+      "yr10Text": "—",
+      "sinceInceptionText": "16.55%"
+    }
+  },
+  "distributions": {
+    "frequency": "Annually",
+    "paymentsPerYear": 1,
+    "frequencyCode": "A",
+    "headers": [
+      "Ex-Date",
+      "Amount"
+    ],
+    "rows": [
+      [
+        "12/13/2023",
+        "0.103"
+      ],
+      [
+        "12/11/2024",
+        "0.633"
+      ],
+      [
+        "12/10/2025",
+        "0.113"
+      ]
+    ]
+  },
+  "holdings": {
+    "pages": [
+      "holdings/001.json"
+    ],
+    "pageSize": 250,
+    "totalRows": 39,
+    "asOfDate": "2026-09-30",
+    "source": "Tema official daily holdings CSV (2026-09-30)"
+  },
+  "history": {
+    "pages": [
+      "history/001.json"
+    ],
+    "pageSize": 1000,
+    "totalRows": 851,
+    "asOfDate": "2026-10-01",
+    "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
+  }
+}

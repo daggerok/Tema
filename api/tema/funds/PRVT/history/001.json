@@ -1,0 +1,68 @@
+{
+  "ticker": "PRVT",
+  "page": 1,
+  "pageSize": 1000,
+  "totalRows": 9,
+  "headers": [
+    "Date",
+    "NAV",
+    "Market Price",
+    "Premium/Discount"
+  ],
+  "rows": [
+    {
+      "Date": "Jul 17 2026",
+      "NAV": "",
+      "Market Price": "21.226601",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Aug 24 2026",
+      "NAV": "",
+      "Market Price": "23.288401",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Aug 25 2026",
+      "NAV": "",
+      "Market Price": "23.4177",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Aug 26 2026",
+      "NAV": "",
+      "Market Price": "23.3241",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Aug 27 2026",
+      "NAV": "",
+      "Market Price": "23.4666",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Aug 28 2026",
+      "NAV": "",
+      "Market Price": "23.3859",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Aug 31 2026",
+      "NAV": "",
+      "Market Price": "23.455",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Sep 01 2026",
+      "NAV": "",
+      "Market Price": "23.469999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Sep 02 2026",
+      "NAV": "",
+      "Market Price": "23.450001",
+      "Premium/Discount": ""
+    }
+  ]
+}

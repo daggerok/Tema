@@ -1,0 +1,132 @@
+{
+  "generatedAt": "2026-10-01T21:47:57Z",
+  "ticker": "HLTH",
+  "name": "HLTH Healthcare AI ETF",
+  "category": "Equity",
+  "categoryPath": "Thematic Equity",
+  "source": {
+    "fundPage": "https://temaetfs.com/hlth",
+    "catalog": "https://temaetfs.com/funds",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/HLTH-holdings-09302026.csv",
+    "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/HLTH",
+    "nportFiling": null,
+    "holdingsSource": "Tema official daily holdings CSV (2026-09-30)",
+    "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
+    "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
+  },
+  "identifiers": {
+    "cusip": "87975E768",
+    "isin": null,
+    "indexTicker": null
+  },
+  "inception": {
+    "fundInceptionDate": "Jul 20 2026",
+    "shareClassInceptionDate": null,
+    "exchange": "NASDAQ"
+  },
+  "expenseRatio": {
+    "display": "0.75%",
+    "value": 0.75,
+    "gross": 0.75,
+    "net": null
+  },
+  "nav": {
+    "display": "$30.02",
+    "value": 30.02,
+    "asOfDate": "Sep 30 2026"
+  },
+  "marketPrice": {
+    "display": "$30.10",
+    "value": 30.1,
+    "asOfDate": "Sep 30 2026"
+  },
+  "premiumDiscount": {
+    "display": "0.26%",
+    "value": 0.26
+  },
+  "aum": {
+    "display": "—",
+    "value": null,
+    "asOfDate": "Sep 30 2026",
+    "source": null
+  },
+  "yields": {
+    "dividendYield": null,
+    "dividendYieldText": "—",
+    "dividendYieldKind": null,
+    "distributionRate": null,
+    "secYield": null,
+    "secYieldText": "—",
+    "secYieldKind": null,
+    "unsubsidizedSecYield": null
+  },
+  "returns": {
+    "derivedFrom": "Yahoo Finance adjusted-close total-return proxy; not official NAV total returns",
+    "monthEnd": {
+      "asOfDate": "Sep 30 2026",
+      "mo1": 5.47,
+      "qtd": null,
+      "ytd": null,
+      "yr1": null,
+      "yr3": null,
+      "yr5": null,
+      "yr10": null,
+      "sinceInception": null,
+      "mo1Text": "5.47%",
+      "qtdText": "—",
+      "ytdText": "—",
+      "yr1Text": "—",
+      "yr3Text": "—",
+      "yr5Text": "—",
+      "yr10Text": "—",
+      "sinceInceptionText": "—"
+    },
+    "quarterEnd": {
+      "asOfDate": "Sep 30 2026",
+      "mo1": 5.47,
+      "qtd": null,
+      "ytd": null,
+      "yr1": null,
+      "yr3": null,
+      "yr5": null,
+      "yr10": null,
+      "sinceInception": null,
+      "mo1Text": "5.47%",
+      "qtdText": "—",
+      "ytdText": "—",
+      "yr1Text": "—",
+      "yr3Text": "—",
+      "yr5Text": "—",
+      "yr10Text": "—",
+      "sinceInceptionText": "—"
+    }
+  },
+  "distributions": {
+    "frequency": "Unknown",
+    "paymentsPerYear": null,
+    "frequencyCode": null,
+    "headers": [
+      "Ex-Date",
+      "Amount"
+    ],
+    "rows": []
+  },
+  "holdings": {
+    "pages": [
+      "holdings/001.json"
+    ],
+    "pageSize": 250,
+    "totalRows": 33,
+    "asOfDate": "2026-09-30",
+    "source": "Tema official daily holdings CSV (2026-09-30)"
+  },
+  "history": {
+    "pages": [
+      "history/001.json"
+    ],
+    "pageSize": 1000,
+    "totalRows": 52,
+    "asOfDate": "2026-10-01",
+    "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
+  }
+}

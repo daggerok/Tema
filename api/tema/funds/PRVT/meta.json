@@ -1,0 +1,132 @@
+{
+  "generatedAt": "2026-10-01T21:48:07Z",
+  "ticker": "PRVT",
+  "name": "Tema Listed Private Managers ETF",
+  "category": "Equity",
+  "categoryPath": "Thematic Equity",
+  "source": {
+    "fundPage": "https://temaetfs.com/prvt",
+    "catalog": "https://temaetfs.com/funds",
+    "holdingsDownload": null,
+    "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/PRVT",
+    "nportFiling": "https://www.sec.gov/Archives/edgar/data/1944285/000119312526323013/primary_doc.xml",
+    "holdingsSource": "SEC EDGAR N-PORT-P fallback (0001193125-26-323013; report 2026-05-31)",
+    "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
+    "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
+  },
+  "identifiers": {
+    "cusip": null,
+    "isin": null,
+    "indexTicker": null
+  },
+  "inception": {
+    "fundInceptionDate": null,
+    "shareClassInceptionDate": null,
+    "exchange": null
+  },
+  "expenseRatio": {
+    "display": "—",
+    "value": null,
+    "gross": null,
+    "net": null
+  },
+  "nav": {
+    "display": "—",
+    "value": null,
+    "asOfDate": "Sep 02 2026"
+  },
+  "marketPrice": {
+    "display": "$23.45",
+    "value": 23.45,
+    "asOfDate": "Sep 02 2026"
+  },
+  "premiumDiscount": {
+    "display": "—",
+    "value": null
+  },
+  "aum": {
+    "display": "$2.32 M",
+    "value": 2315758.01,
+    "asOfDate": "May 31 2026",
+    "source": "SEC EDGAR N-PORT-P filing"
+  },
+  "yields": {
+    "dividendYield": null,
+    "dividendYieldText": "—",
+    "dividendYieldKind": null,
+    "distributionRate": null,
+    "secYield": null,
+    "secYieldText": "—",
+    "secYieldKind": null,
+    "unsubsidizedSecYield": null
+  },
+  "returns": {
+    "derivedFrom": "Yahoo Finance adjusted-close total-return proxy; not official NAV total returns",
+    "monthEnd": {
+      "asOfDate": "Aug 31 2026",
+      "mo1": 10.46,
+      "qtd": null,
+      "ytd": null,
+      "yr1": null,
+      "yr3": null,
+      "yr5": null,
+      "yr10": null,
+      "sinceInception": null,
+      "mo1Text": "10.46%",
+      "qtdText": "—",
+      "ytdText": "—",
+      "yr1Text": "—",
+      "yr3Text": "—",
+      "yr5Text": "—",
+      "yr10Text": "—",
+      "sinceInceptionText": "—"
+    },
+    "quarterEnd": {
+      "asOfDate": "Sep 02 2026",
+      "mo1": 10.46,
+      "qtd": null,
+      "ytd": null,
+      "yr1": null,
+      "yr3": null,
+      "yr5": null,
+      "yr10": null,
+      "sinceInception": null,
+      "mo1Text": "10.46%",
+      "qtdText": "—",
+      "ytdText": "—",
+      "yr1Text": "—",
+      "yr3Text": "—",
+      "yr5Text": "—",
+      "yr10Text": "—",
+      "sinceInceptionText": "—"
+    }
+  },
+  "distributions": {
+    "frequency": "Unknown",
+    "paymentsPerYear": null,
+    "frequencyCode": null,
+    "headers": [
+      "Ex-Date",
+      "Amount"
+    ],
+    "rows": []
+  },
+  "holdings": {
+    "pages": [
+      "holdings/001.json"
+    ],
+    "pageSize": 250,
+    "totalRows": 30,
+    "asOfDate": "2026-05-31",
+    "source": "SEC EDGAR N-PORT-P fallback (0001193125-26-323013; report 2026-05-31)"
+  },
+  "history": {
+    "pages": [
+      "history/001.json"
+    ],
+    "pageSize": 1000,
+    "totalRows": 9,
+    "asOfDate": "2026-09-02",
+    "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
+  }
+}

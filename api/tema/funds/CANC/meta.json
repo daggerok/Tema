@@ -1,0 +1,145 @@
+{
+  "generatedAt": "2026-10-01T21:47:53Z",
+  "ticker": "CANC",
+  "name": "CANC Oncology ETF",
+  "category": "Equity",
+  "categoryPath": "Thematic Equity",
+  "source": {
+    "fundPage": "https://temaetfs.com/canc",
+    "catalog": "https://temaetfs.com/funds",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/CANC-holdings-09302026.csv",
+    "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/CANC",
+    "nportFiling": null,
+    "holdingsSource": "Tema official daily holdings CSV (2026-09-30)",
+    "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
+    "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
+  },
+  "identifiers": {
+    "cusip": "87975E701",
+    "isin": null,
+    "indexTicker": null
+  },
+  "inception": {
+    "fundInceptionDate": "Aug 14 2023",
+    "shareClassInceptionDate": null,
+    "exchange": "Nasdaq"
+  },
+  "expenseRatio": {
+    "display": "—",
+    "value": null,
+    "gross": null,
+    "net": null
+  },
+  "nav": {
+    "display": "$41.89",
+    "value": 41.89,
+    "asOfDate": "Sep 30 2026"
+  },
+  "marketPrice": {
+    "display": "$42.01",
+    "value": 42.01,
+    "asOfDate": "Sep 30 2026"
+  },
+  "premiumDiscount": {
+    "display": "0.29%",
+    "value": 0.29
+  },
+  "aum": {
+    "display": "$208,604,999",
+    "value": 208604999,
+    "asOfDate": "Sep 30 2026",
+    "source": "Tema official fund page"
+  },
+  "yields": {
+    "dividendYield": 0.05,
+    "dividendYieldText": "0.05%",
+    "dividendYieldKind": "Trailing 12-month Yahoo Finance chart distributions divided by latest market price",
+    "distributionRate": null,
+    "secYield": null,
+    "secYieldText": "—",
+    "secYieldKind": null,
+    "unsubsidizedSecYield": null
+  },
+  "returns": {
+    "derivedFrom": "Yahoo Finance adjusted-close total-return proxy; not official NAV total returns",
+    "monthEnd": {
+      "asOfDate": "Sep 30 2026",
+      "mo1": -3.47,
+      "qtd": 1.87,
+      "ytd": 21,
+      "yr1": 46.48,
+      "yr3": 23.32,
+      "yr5": null,
+      "yr10": null,
+      "sinceInception": 120.85,
+      "mo1Text": "-3.47%",
+      "qtdText": "1.87%",
+      "ytdText": "21.00%",
+      "yr1Text": "46.48%",
+      "yr3Text": "23.32%",
+      "yr5Text": "—",
+      "yr10Text": "—",
+      "sinceInceptionText": "120.85%"
+    },
+    "quarterEnd": {
+      "asOfDate": "Sep 30 2026",
+      "mo1": -3.47,
+      "qtd": 1.87,
+      "ytd": 21,
+      "yr1": 46.48,
+      "yr3": 23.32,
+      "yr5": null,
+      "yr10": null,
+      "sinceInception": 120.85,
+      "mo1Text": "-3.47%",
+      "qtdText": "1.87%",
+      "ytdText": "21.00%",
+      "yr1Text": "46.48%",
+      "yr3Text": "23.32%",
+      "yr5Text": "—",
+      "yr10Text": "—",
+      "sinceInceptionText": "120.85%"
+    }
+  },
+  "distributions": {
+    "frequency": "Annually",
+    "paymentsPerYear": 1,
+    "frequencyCode": "A",
+    "headers": [
+      "Ex-Date",
+      "Amount"
+    ],
+    "rows": [
+      [
+        "12/13/2023",
+        "0.149"
+      ],
+      [
+        "12/11/2024",
+        "0.728"
+      ],
+      [
+        "12/10/2025",
+        "0.02"
+      ]
+    ]
+  },
+  "holdings": {
+    "pages": [
+      "holdings/001.json"
+    ],
+    "pageSize": 250,
+    "totalRows": 59,
+    "asOfDate": "2026-09-30",
+    "source": "Tema official daily holdings CSV (2026-09-30)"
+  },
+  "history": {
+    "pages": [
+      "history/001.json"
+    ],
+    "pageSize": 1000,
+    "totalRows": 787,
+    "asOfDate": "2026-10-01",
+    "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
+  }
+}
