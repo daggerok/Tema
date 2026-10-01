@@ -42,39 +42,12 @@ function tableFirstColumn(markdown: string, heading: string): { label: string; r
 }
 
 const expectedBrands = [
-  'abrdn (Aberdeen)', 'Amplify', 'Capital Group', 'Fidelity', 'First Trust',
-  'Franklin Templeton', 'Global X', 'Goldman Sachs', 'Invesco', 'iShares',
-  'JPMorgan', 'NEOS', 'Northern Trust', 'ProShares', 'Schwab', 'SPDR',
-  'Tema ETFs', 'VanEck', 'Vanguard', 'VictoryShares', 'WisdomTree',
+  'AAM', 'abrdn (Aberdeen)', 'Amplify', 'ARK Invest', 'Capital Group', 'Fidelity',
+  'First Trust', 'Franklin Templeton', 'Global X', 'Goldman Sachs', 'Invesco', 'iShares',
+  'JPMorgan', 'NEOS', 'Northern Trust', 'Pacer ETFs', 'ProShares', 'Schwab', 'SPDR',
+  'Sprott ETFs', 'Tema ETFs', 'Themes ETFs', 'VanEck', 'Vanguard', 'VictoryShares',
+  'WisdomTree', 'Xtrackers',
 ];
-
-const workflowInputMap: Record<string, string> = {
-  MAX_FETCHES: 'max_fetches',
-  REQUEST_SLEEP: 'request_sleep',
-  CONCURRENCY: 'concurrency',
-  MAX_RETRIES: 'max_retries',
-  TICKERS: 'tickers',
-  CATEGORY: 'category',
-  AUM: 'aum',
-  TER: 'ter',
-  DIVIDEND_YIELD: 'dividend_yield',
-  SEC_YIELD: 'sec_yield',
-  PERFORMANCE_YTD: 'performance_ytd',
-  PERFORMANCE_1Y: 'performance_1y',
-  PERFORMANCE_3Y: 'performance_3y',
-  PERFORMANCE_5Y: 'performance_5y',
-  PERFORMANCE_10Y: 'performance_10y',
-  TOTAL_RETURN_YTD: 'total_return_ytd',
-  TOTAL_RETURN_1Y: 'total_return_1y',
-  TOTAL_RETURN_3Y: 'total_return_3y',
-  TOTAL_RETURN_5Y: 'total_return_5y',
-  TOTAL_RETURN_10Y: 'total_return_10y',
-  HOLDINGS_PAGE_SIZE: 'holdings_page_size',
-  HISTORY_PAGE_SIZE: 'history_page_size',
-  HISTORY_RANGE: 'history_range',
-  EDGAR_FALLBACK: 'edgar_fallback',
-  SKIP_YAHOO: 'skip_yahoo',
-};
 
 const documentedControls = [
   'MAX_FETCHES', 'REQUEST_SLEEP', 'CONCURRENCY', 'MAX_RETRIES', 'TICKERS', 'CATEGORY',
@@ -91,9 +64,10 @@ test('README preserves the sibling heading order and common intro wording', () =
     '## Using Bun',
     '## Updating the static Tema ETFs data',
     '### Data sources',
+    '### Metrics and caveats',
     '### Update controls',
     '### Examples',
-    '## TypeScript',
+    '## TypeScript and verification',
     '## Brands table',
     '## Sibling applications',
     '## License',
@@ -113,7 +87,6 @@ test('Brands and sibling-application tables are complete and alphabetized', () =
   expect(appRows.map(row => row.label)).toEqual(expectedBrands);
   expect(brandRows.find(row => row.label === 'Tema ETFs')?.row).toContain('https://temaetfs.com/funds');
   expect(brandRows.find(row => row.label === 'Tema ETFs')?.row).toContain('https://daggerok.github.io/Tema/');
-  expect(brandRows.find(row => row.label === 'Tema ETFs')?.row).toContain('deployment pending');
   expect(appRows.find(row => row.label === 'Tema ETFs')?.row).toContain('https://github.com/daggerok/Tema');
 });
 
@@ -161,7 +134,8 @@ test('README covers every canonical updater control and its safety caveats', () 
   ]) expect(readme).toContain(marker);
   expect(readme).toContain('real, monitored address');
   expect(readme).toContain('All supplied filters use **AND** logic');
-  expect(readme).toContain('the workflow exposes the 25 filter/tuning controls');
+  expect(readme).toContain('24 common controls as individual manual inputs plus one `advanced` input');
+  expect(readme).toContain('file defaults < `advanced` JSON < nonblank workflow inputs < protected Actions variable or environment variable');
 });
 
 test('README commands and examples parse with updater defaults and live catalog tickers', () => {
@@ -195,22 +169,19 @@ test('README commands and examples parse with updater defaults and live catalog 
   ]) expect(readme).toContain(command);
 });
 
-test('scheduled/manual updater workflow maps all 25 supported inputs and fails closed without SEC contact', () => {
+test('scheduled/manual updater workflow resolves controls through the shared resolver and fails closed on bad scope', () => {
   const inputNames = [...workflow.matchAll(/^      ([a-z0-9_]+):$/gm)].map(match => match[1]);
-  const mappings = Object.fromEntries([...workflow.matchAll(/^      ([A-Z0-9_]+): \$\{\{ inputs\.([a-z0-9_]+) \}\}$/gm)]
-    .map(match => [match[1], match[2]]));
   expect(inputNames).toHaveLength(25);
-  expect(mappings).toEqual(workflowInputMap);
+  expect(inputNames).toContain('advanced');
   expect(workflow).toContain("cron: '0 0 * * 0'");
   expect(workflow).toContain('uses: actions/checkout@v7');
   expect(workflow).toContain('uses: oven-sh/setup-bun@v2');
   expect(workflow).toContain('run: bun install --frozen-lockfile');
   expect(workflow).toContain('run: bun test');
   expect(workflow).toContain('run: bun ./scripts/update-data.ts');
-  expect(workflow).toContain('git status --porcelain --untracked-files=all -- api/tema');
-  expect(workflow).toContain('OUTPUT_DIR: api/tema');
-  expect(workflow).toContain('SEC_UA: ${{ vars.SEC_UA }}');
-  expect(workflow).toContain('VERBOSE: "true"');
-  expect(workflow).toContain('Set the repository Actions variable SEC_UA');
+  expect(workflow).toContain('git add api/tema');
+  expect(workflow).toContain('PROTECTED_SEC_UA: ${{ vars.SEC_UA }}');
+  expect(workflow).toContain('resolveControls(file, advanced, individual, protectedVars)');
+  expect(workflow).toContain('controls.OUTPUT_DIR = "api/tema"');
   expect(workflow).not.toMatch(/^\s{2}push:/m);
 });
