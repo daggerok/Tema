@@ -8,9 +8,15 @@ import { describe, expect, test } from 'bun:test';
 import {
   buildPages,
   createRequestGate,
+  decodeTemaCsv,
+  deriveTemaMetrics,
+  edgarSeriesFilingsUrl,
+  fillNportTickers,
+  inferDistributionFrequency,
   envValue,
   findTemaHoldingsCsvUrl,
   normalizeTemaDate,
+  nportUrlFor,
   outputContentKey,
   outputCount,
   outputFundLine,
@@ -25,10 +31,18 @@ import {
   parseTemaFundPage,
   parseTemaCatalog,
   parseTemaHoldingsCsv,
+  parseCompanyTickerMap,
+  parseTemaFundTickerTable,
+  parseNport,
+  parseNportAccessions,
+  parseEdgarAtomFilings,
+  parseYahooChart,
+  yahooChartUrl,
   passesFundFilters,
   passesRange,
   readUpdaterConfig,
   samePublishedContent,
+  shiftIsoDate,
   writeJsonIfChanged,
 } from './update-data.ts';
 
@@ -171,12 +185,21 @@ describe('Tema fund-page metadata parsing', () => {
     });
   });
 
+  test('uses the page heading when the catalog exposes only a bare ticker label', () => {
+    expect(parseTemaFundPage(fundPageFixture, 'VOLT', 'VOLT').name).toBe('Tema Electrification ETF');
+  });
+
   test('rejects a fund-page ticker that does not match the requested catalog ticker', () => {
     expect(() => parseTemaFundPage(fundPageFixture, 'ARMY')).toThrow('fund page identifies itself as VOLT');
   });
 });
 
 describe('Tema holdings date normalization', () => {
+  test('date offsets clamp leap-day/month-end dates instead of rolling into the next month', () => {
+    expect(shiftIsoDate('2024-02-29', -1, 0)).toBe('2023-02-28');
+    expect(shiftIsoDate('2026-03-31', 0, -1)).toBe('2026-02-28');
+  });
+
   test.each([
     ['2026-09-29', '2026-09-29'],
     ['09/29/2026', '2026-09-29'],
@@ -199,6 +222,7 @@ describe('Tema updater configuration and filters', () => {
       maxRetries: 2,
       holdingsPageSize: 250,
       historyPageSize: 1000,
+      historyRange: 'max',
       tickers: [],
       categories: [],
       edgarFallback: true,
@@ -227,6 +251,8 @@ describe('Tema updater configuration and filters', () => {
       SKIP_YAHOO: 'true',
       HOLDINGS_PAGE_SIZE: '100',
       HISTORY_PAGE_SIZE: '365',
+      HISTORY_RANGE: '5y',
+      SEC_UA: 'Tema test contact@example.com',
       OUTPUT_DIR: 'isolated/api/tema',
     });
     expect(config).toMatchObject({
@@ -246,6 +272,8 @@ describe('Tema updater configuration and filters', () => {
       skipYahoo: true,
       holdingsPageSize: 100,
       historyPageSize: 365,
+      historyRange: '5y',
+      secUserAgent: 'Tema test contact@example.com',
     });
     expect(config.outputDir.endsWith('/isolated/api/tema')).toBe(true);
   });
@@ -263,6 +291,7 @@ describe('Tema updater configuration and filters', () => {
     expect(() => parseAumBound('many')).toThrow('invalid AUM bound');
     expect(() => readUpdaterConfig({ TER: '0.2' })).toThrow('MIN:MAX');
     expect(() => readUpdaterConfig({ TER: '1:0.1' })).toThrow('minimum exceeds maximum');
+    expect(() => readUpdaterConfig({ HISTORY_RANGE: '10d' })).toThrow('HISTORY_RANGE must be max or a number of years');
   });
 
   test('expands all AUM presets and maps every return tenor to a numeric range', () => {
@@ -378,5 +407,129 @@ describe('independent request pacing lanes', () => {
     await expect(recovery.pace()).rejects.toThrow('simulated lane delay failure');
     await recovery.pace();
     expect(recoveryWaits).toEqual([5, 5]);
+  });
+});
+
+describe('Tema source encodings and Yahoo chart normalization', () => {
+  test('decodes the issuer-advertised x-macroman charset', () => {
+    expect(decodeTemaCsv(new Uint8Array([0x8e]), 'text/csv; charset=x-macroman')).toBe('é');
+  });
+
+  test('parses Yahoo daily close, adjusted close, metadata, dividends and missing close rows', () => {
+    const epoch = (date: string) => Date.parse(`${date}T00:00:00Z`) / 1000;
+    const parsed = parseYahooChart({ chart: { result: [{
+      meta: { longName: 'VOLT ETF', exchangeName: 'Nasdaq', currency: 'USD', regularMarketPrice: 12.345, regularMarketTime: epoch('2026-09-29'), firstTradeDate: epoch('2024-12-03') },
+      timestamp: [epoch('2026-09-26'), epoch('2026-09-28'), epoch('2026-09-29')],
+      indicators: {
+        quote: [{ close: [10.12345678, null, 12.345678], volume: [100, 200, 300] }],
+        adjclose: [{ adjclose: [10.124, 50, 12.349] }],
+      },
+      events: { dividends: { '1788220800': { date: epoch('2026-09-01'), amount: 0.125 } } },
+    }] } });
+    expect(parsed.longName).toBe('VOLT ETF');
+    expect(parsed.exchangeName).toBe('Nasdaq');
+    expect(parsed.currency).toBe('USD');
+    expect(parsed.days).toEqual([
+      { date: '2026-09-26', close: 10.123457, adjClose: 10.12, volume: 100 },
+      { date: '2026-09-29', close: 12.345678, adjClose: 12.35, volume: 300 },
+    ]);
+    expect(parsed.dividends).toEqual([{ date: '2026-09-01', amount: 0.125 }]);
+    expect(() => parseYahooChart({ chart: { result: [] } })).toThrow('empty result');
+  });
+
+  test('builds time-bounded Yahoo URLs but does not include live URLs in any persisted source helper', () => {
+    const max = new URL(yahooChartUrl('VOLT', 'max', 20_000));
+    expect(max.pathname).toBe('/v8/finance/chart/VOLT');
+    expect(max.searchParams.get('period1')).toBe('0');
+    expect(max.searchParams.get('period2')).toBe('20000');
+    expect(max.searchParams.get('interval')).toBe('1d');
+    expect(max.searchParams.get('events')).toBe('div,splits');
+    const tenYears = new URL(yahooChartUrl('VOLT', '10y', 20_000));
+    expect(tenYears.searchParams.get('period1')).toBe(String(Math.floor(20_000 - 10 * 365.25 * 86_400)));
+  });
+
+  test('derives total-return metrics and dividend yield from dated adjusted-close fixtures', () => {
+    const days = [
+      { date: '2024-12-31', close: 80, adjClose: 80, volume: 1 },
+      { date: '2025-01-02', close: 81, adjClose: 81, volume: 1 },
+      { date: '2025-06-30', close: 90, adjClose: 90, volume: 1 },
+      { date: '2025-09-29', close: 95, adjClose: 95, volume: 1 },
+      { date: '2025-12-31', close: 100, adjClose: 100, volume: 1 },
+      { date: '2026-01-02', close: 101, adjClose: 101, volume: 1 },
+      { date: '2026-06-30', close: 110, adjClose: 110, volume: 1 },
+      { date: '2026-09-29', close: 120, adjClose: 120, volume: 1 },
+    ];
+    const dividends = [
+      { date: '2025-10-01', amount: 1 },
+      { date: '2026-04-01', amount: 1 },
+      { date: '2026-09-01', amount: 1 },
+    ];
+    const result = deriveTemaMetrics({ days, dividends, currency: 'USD', exchangeName: 'Nasdaq', longName: 'VOLT', regularMarketPrice: 120, regularMarketTime: null, firstTradeDate: null });
+    expect(result.metrics.ytd).toBe(20);
+    expect(result.metrics.tr1y).toBe(26.32);
+    expect(result.metrics.cagr3y).toBe(null);
+    expect(result.dividendYield).toBe(2.5);
+    expect(result.latestDividend).toEqual({ date: '2026-09-01', amount: 1 });
+    expect(result.frequency).toEqual({ frequency: 'Semi-annually', paymentsPerYear: 2 });
+    expect(result.monthEnd.asOfDate).toBe('Jun 30 2026');
+    expect(result.quarterEnd.asOfDate).toBe('Jun 30 2026');
+  });
+
+  test('keeps absent dividend history unknown instead of asserting a zero yield', () => {
+    const chart = { days: [{ date: '2026-09-29', close: 10, adjClose: 10, volume: 0 }], dividends: [], exchangeName: '', longName: '', currency: '', regularMarketPrice: 10, regularMarketTime: null, firstTradeDate: null };
+    const result = deriveTemaMetrics(chart);
+    expect(result.dividendYield).toBe(null);
+    expect(result.frequency.frequency).toBe('Unknown');
+    expect(inferDistributionFrequency([])).toEqual({ frequency: 'Unknown', paymentsPerYear: null });
+  });
+});
+
+describe('Tema SEC N-PORT fallback parsing', () => {
+  test('maps only Tema ETF Trust symbols from reordered fund-ticker table fields', () => {
+    const payload = {
+      fields: ['symbol', 'classId', 'seriesId', 'cik'],
+      data: [
+        ['VOLT', 'C000239058', 'S000088946', 1944285],
+        ['OTHER', 'C000000001', 'S000000001', 1234567],
+      ],
+    };
+    expect(parseTemaFundTickerTable(payload).get('VOLT')).toEqual({ cik: '0001944285', seriesId: 'S000088946', classId: 'C000239058' });
+    expect(parseTemaFundTickerTable(payload).has('OTHER')).toBe(false);
+  });
+
+  test('parses recent N-PORT accessions and series Atom feed with stable archive URLs', () => {
+    const filings = parseNportAccessions({
+      cik: '0001944285',
+      filings: { recent: {
+        form: ['NPORT-P', 'N-1A'],
+        accessionNumber: ['0001944285-26-000123', '0001944285-26-000124'],
+        filingDate: ['2026-09-29', '2026-09-30'],
+        reportDate: ['2026-08-31', ''],
+      } },
+    });
+    expect(filings).toHaveLength(1);
+    expect(filings[0]).toEqual({
+      accession: '0001944285-26-000123',
+      filed: '2026-09-29',
+      reportDate: '2026-08-31',
+      url: 'https://www.sec.gov/Archives/edgar/data/1944285/000194428526000123/primary_doc.xml',
+    });
+    expect(nportUrlFor('0001944285', '0001944285-26-000123')).toBe(filings[0].url);
+    const atom = `<feed><entry><filing-type>NPORT-P</filing-type><accession-number>0001944285-26-000123</accession-number><filing-date>2026-09-29</filing-date><period>2026-08-31</period><filing-href>https://www.sec.gov/Archives/edgar/data/1944285/000194428526000123/index.htm</filing-href></entry></feed>`;
+    expect(parseEdgarAtomFilings(atom)[0].url).toBe(filings[0].url);
+    const url = new URL(edgarSeriesFilingsUrl('S000088946'));
+    expect(url.searchParams.get('CIK')).toBe('S000088946');
+    expect(url.searchParams.get('type')).toBe('NPORT-P');
+  });
+
+  test('maps N-PORT XML positions, CUSIP, weights, net assets and issuer tickers', () => {
+    const xml = `<edgarSubmission><genInfo><regName>Tema ETF Trust</regName><regCik>0001944285</regCik><seriesName>VOLT ETF</seriesName><seriesId>S000088946</seriesId><repPdDate>2026-08-31</repPdDate></genInfo><fundInfo><netAssets>1000000</netAssets></fundInfo><invstOrSec><name>Example Public Company Inc</name><cusip>123456789</cusip><pctVal>12.5</pctVal><valUSD>125000</valUSD><balance>1000</balance><assetCat>EC</assetCat></invstOrSec><invstOrSec><name>Cash Collateral</name><pctVal>1.5</pctVal><valUSD>15000</valUSD><balance>15000</balance><assetCat>STIV</assetCat></invstOrSec></edgarSubmission>`;
+    const parsed = parseNport(xml);
+    expect(parsed).toMatchObject({ regName: 'Tema ETF Trust', regCik: '0001944285', seriesName: 'VOLT ETF', seriesId: 'S000088946', reportDate: '2026-08-31', netAssets: 1_000_000 });
+    expect(parsed.holdings).toHaveLength(2);
+    expect(parsed.holdings[0]).toMatchObject({ Name: 'Example Public Company Inc', Identifier: '123456789', Weight: '12.5', 'Market Value': '125000', 'Shares Held': '1000' });
+    expect(parsed.holdings[1].Cash).toBe('');
+    const issuers = parseCompanyTickerMap({ '0': { ticker: 'EXM', title: 'Example Public Company Inc' } });
+    expect(fillNportTickers(parsed.holdings, issuers)[0].Ticker).toBe('EXM');
   });
 });

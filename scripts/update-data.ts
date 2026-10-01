@@ -251,7 +251,7 @@ export function parseTemaFundPage(html: string, requestedTicker: string, catalog
 
   return {
     ticker,
-    name: catalogName || heading,
+    name: catalogName && catalogName.toUpperCase() !== expectedTicker ? catalogName : heading,
     cusip: fields.get('cusip') ?? '',
     inceptionDate: formatDateLabel(inceptionIso),
     ter,
@@ -337,6 +337,8 @@ export type UpdaterConfig = {
   maxRetries: number;
   holdingsPageSize: number;
   historyPageSize: number;
+  historyRange: string;
+  secUserAgent: string;
   outputDir: string;
   tickers: string[];
   categories: string[];
@@ -441,6 +443,12 @@ function parseFlag(raw: string | undefined, fallback: boolean): boolean {
   throw new Error(`expected true/false, got ${raw}`);
 }
 
+function parseHistoryRange(raw: string | undefined): string {
+  const value = (raw ?? 'max').trim().toLowerCase() || 'max';
+  if (value !== 'max' && !/^\d+y$/.test(value)) throw new Error(`HISTORY_RANGE must be max or a number of years (for example 10y), got ${value}`);
+  return value;
+}
+
 export function readUpdaterConfig(env: Record<string, string | undefined> = process.env): UpdaterConfig {
   const outputDir = resolve(envValue(env, 'OUTPUT_DIR') ?? 'api/tema');
   return {
@@ -450,6 +458,8 @@ export function readUpdaterConfig(env: Record<string, string | undefined> = proc
     maxRetries: parsePositiveInt(envValue(env, 'MAX_RETRIES'), 2, true),
     holdingsPageSize: parsePositiveInt(envValue(env, 'HOLDINGS_PAGE_SIZE'), 250),
     historyPageSize: parsePositiveInt(envValue(env, 'HISTORY_PAGE_SIZE'), 1000),
+    historyRange: parseHistoryRange(envValue(env, 'HISTORY_RANGE')),
+    secUserAgent: envValue(env, 'SEC_UA') ?? 'Tema ETF updater research@example.com',
     outputDir,
     tickers: parseList(envValue(env, 'TICKERS')).map(value => value.toUpperCase()),
     categories: parseCategoryList(envValue(env, 'CATEGORY', ['ASSET_CLASS'])),
@@ -513,9 +523,11 @@ function outputConfigEntries(config: UpdaterConfig): [string, string][] {
     ['DIVIDEND_YIELD', configRangeValue(config.dividendYieldRange)],
     ['EDGAR_FALLBACK', String(config.edgarFallback)],
     ['HISTORY_PAGE_SIZE', String(config.historyPageSize)],
+    ['HISTORY_RANGE', config.historyRange],
     ['HOLDINGS_PAGE_SIZE', String(config.holdingsPageSize)],
     ['MAX_RETRIES', String(config.maxRetries)],
     ['OUTPUT_DIR', config.outputDir],
+    ['SEC_UA', config.secUserAgent],
     ['SEC_YIELD', configRangeValue(config.secYieldRange)],
     ['SKIP_YAHOO', String(config.skipYahoo)],
     ['TER', configRangeValue(config.terRange)],
@@ -734,5 +746,427 @@ export async function readJsonFile(filePath: string): Promise<unknown | null> {
 export async function removeFileIfExists(filePath: string): Promise<void> {
   await unlink(filePath).catch(error => {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  });
+}
+
+export function decodeTemaCsv(bytes: Uint8Array, contentType = ''): string {
+  const charset = /charset\s*=\s*["']?([^;"'\s]+)/i.exec(contentType)?.[1]?.toLowerCase() ?? 'utf-8';
+  if (/^(x-)?mac-?roman$|^macintosh$/.test(charset)) return new TextDecoder('macintosh').decode(bytes);
+  try {
+    return new TextDecoder(charset).decode(bytes);
+  } catch {
+    return new TextDecoder('utf-8').decode(bytes);
+  }
+}
+
+export type ChartDay = { date: string; close: number; adjClose: number; volume: number };
+export type ChartDividend = { date: string; amount: number };
+export type ParsedYahooChart = {
+  exchangeName: string;
+  longName: string;
+  currency: string;
+  regularMarketPrice: number | null;
+  regularMarketTime: number | null;
+  firstTradeDate: number | null;
+  days: ChartDay[];
+  dividends: ChartDividend[];
+};
+
+function recordOf(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function numberOrNull(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value.replace(/[$,%\s,]/g, ''));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function roundTo(value: number, digits: number): number {
+  const factor = 10 ** digits;
+  const rounded = Math.round((value + Number.EPSILON) * factor) / factor;
+  return Object.is(rounded, -0) ? 0 : rounded;
+}
+
+export function epochToIsoDate(epochSeconds: number): string {
+  if (!Number.isFinite(epochSeconds)) return '';
+  const date = new Date(epochSeconds * 1000);
+  if (!Number.isFinite(date.getTime())) return '';
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+}
+
+/** Parse Yahoo chart history while rounding adjusted close to two decimals to eliminate source jitter. */
+export function parseYahooChart(payload: unknown): ParsedYahooChart {
+  const chart = recordOf(recordOf(payload).chart);
+  const error = chart.error;
+  if (error) throw new Error(`Yahoo chart error: ${JSON.stringify(error)}`);
+  const resultList = Array.isArray(chart.result) ? chart.result : [];
+  const result = recordOf(resultList[0]);
+  if (!resultList.length) throw new Error('Yahoo chart returned an empty result');
+  const meta = recordOf(result.meta);
+  const timestamps = Array.isArray(result.timestamp) ? result.timestamp : [];
+  const indicators = recordOf(result.indicators);
+  const quote = recordOf((Array.isArray(indicators.quote) ? indicators.quote : [])[0]);
+  const adjusted = recordOf((Array.isArray(indicators.adjclose) ? indicators.adjclose : [])[0]);
+  const closes = Array.isArray(quote.close) ? quote.close : [];
+  const adjustedCloses = Array.isArray(adjusted.adjclose) ? adjusted.adjclose : closes;
+  const volumes = Array.isArray(quote.volume) ? quote.volume : [];
+  const days: ChartDay[] = [];
+  for (let index = 0; index < timestamps.length; index += 1) {
+    const timestamp = numberOrNull(timestamps[index]);
+    const close = numberOrNull(closes[index]);
+    if (timestamp === null || close === null) continue;
+    const adjustedClose = numberOrNull(adjustedCloses[index]) ?? close;
+    const date = epochToIsoDate(timestamp);
+    if (!date) continue;
+    days.push({
+      date,
+      close: roundTo(close, 6),
+      adjClose: roundTo(adjustedClose, 2),
+      volume: numberOrNull(volumes[index]) ?? 0,
+    });
+  }
+  const eventObject = recordOf(recordOf(result.events).dividends);
+  const dividends = Object.entries(eventObject).flatMap(([epochKey, rawEvent]) => {
+    const event = recordOf(rawEvent);
+    const epoch = numberOrNull(event.date) ?? numberOrNull(epochKey);
+    const amount = numberOrNull(event.amount);
+    if (epoch === null || amount === null || amount <= 0) return [];
+    const date = epochToIsoDate(epoch);
+    return date ? [{ date, amount: roundTo(amount, 6) }] : [];
+  }).sort((a, b) => a.date.localeCompare(b.date));
+  return {
+    exchangeName: String(meta.fullExchangeName ?? meta.exchangeName ?? ''),
+    longName: String(meta.longName ?? meta.shortName ?? ''),
+    currency: String(meta.currency ?? ''),
+    regularMarketPrice: numberOrNull(meta.regularMarketPrice) ?? numberOrNull(meta.previousClose),
+    regularMarketTime: numberOrNull(meta.regularMarketTime),
+    firstTradeDate: numberOrNull(meta.firstTradeDate),
+    days: days.sort((a, b) => a.date.localeCompare(b.date)),
+    dividends,
+  };
+}
+
+export function yahooChartUrl(ticker: string, historyRange: string, nowSeconds = Math.floor(Date.now() / 1000)): string {
+  let period1 = 0;
+  const years = /^(\d+)y$/.exec(historyRange.toLowerCase());
+  if (years) period1 = Math.floor(nowSeconds - Number(years[1]) * 365.25 * 86_400);
+  const params = new URLSearchParams({ period1: String(period1), period2: String(nowSeconds), interval: '1d', events: 'div,splits' });
+  return `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?${params.toString()}`;
+}
+
+export type FrequencyResult = { frequency: string; paymentsPerYear: number | null };
+
+export function inferDistributionFrequency(dividends: ChartDividend[]): FrequencyResult {
+  if (dividends.length < 2) return { frequency: 'Unknown', paymentsPerYear: null };
+  const sorted = [...dividends].sort((a, b) => a.date.localeCompare(b.date));
+  const recent = sorted.slice(-8);
+  const gaps = recent.slice(1).map((item, index) => {
+    const start = new Date(`${recent[index].date}T00:00:00Z`).getTime();
+    const end = new Date(`${item.date}T00:00:00Z`).getTime();
+    return (end - start) / 86_400_000;
+  }).filter(value => Number.isFinite(value) && value > 0).sort((a, b) => a - b);
+  if (!gaps.length) return { frequency: 'Unknown', paymentsPerYear: null };
+  const median = gaps[Math.floor(gaps.length / 2)];
+  if (median >= 300) return { frequency: 'Annually', paymentsPerYear: 1 };
+  if (median >= 150) return { frequency: 'Semi-annually', paymentsPerYear: 2 };
+  if (median >= 75) return { frequency: 'Quarterly', paymentsPerYear: 4 };
+  if (median >= 25) return { frequency: 'Monthly', paymentsPerYear: 12 };
+  return { frequency: 'Irregular', paymentsPerYear: null };
+}
+
+export type PeriodReturnMetrics = {
+  asOfDate: string;
+  mo1: number | null;
+  qtd: number | null;
+  ytd: number | null;
+  yr1: number | null;
+  yr3: number | null;
+  yr5: number | null;
+  yr10: number | null;
+  sinceInception: number | null;
+};
+
+export type DerivedTemaMetrics = {
+  metrics: Record<string, number | string | null>;
+  monthEnd: PeriodReturnMetrics;
+  quarterEnd: PeriodReturnMetrics;
+  dividendYield: number | null;
+  latestDividend: ChartDividend | null;
+  frequency: FrequencyResult;
+};
+
+function dayAtOrBefore(days: ChartDay[], isoDate: string): ChartDay | null {
+  for (let index = days.length - 1; index >= 0; index -= 1) if (days[index].date <= isoDate) return days[index];
+  return null;
+}
+
+export function shiftIsoDate(isoDate: string, years: number, months: number): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  const monthIndex = month - 1 + months;
+  const targetYear = year + years + Math.floor(monthIndex / 12);
+  const targetMonth = ((monthIndex % 12) + 12) % 12;
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  const target = new Date(Date.UTC(targetYear, targetMonth, Math.min(day, lastDay)));
+  return epochToIsoDate(target.getTime() / 1000);
+}
+
+function percentChange(start: ChartDay | null, end: ChartDay | null): number | null {
+  if (!start || !end || start.adjClose <= 0) return null;
+  return roundTo(((end.adjClose / start.adjClose) - 1) * 100, 2);
+}
+
+function annualizedReturn(start: ChartDay | null, end: ChartDay | null, years: number): number | null {
+  if (!start || !end || start.adjClose <= 0 || years <= 0) return null;
+  return roundTo(((end.adjClose / start.adjClose) ** (1 / years) - 1) * 100, 2);
+}
+
+function rangeReturnAtAnchor(days: ChartDay[], anchor: ChartDay): PeriodReturnMetrics {
+  const date = anchor.date;
+  const year = Number(date.slice(0, 4));
+  const previousMonthEnd = dayAtOrBefore(days, shiftIsoDate(date, 0, -1));
+  const previousQuarterMonth = Math.floor((Number(date.slice(5, 7)) - 1) / 3) * 3 - 1;
+  const quarterStart = new Date(Date.UTC(year, previousQuarterMonth + 1, 0));
+  const previousQuarterEnd = dayAtOrBefore(days, epochToIsoDate(quarterStart.getTime() / 1000));
+  const priorYearEnd = dayAtOrBefore(days, `${year - 1}-12-31`);
+  const oneYear = dayAtOrBefore(days, shiftIsoDate(date, -1, 0));
+  const threeYear = dayAtOrBefore(days, shiftIsoDate(date, -3, 0));
+  const fiveYear = dayAtOrBefore(days, shiftIsoDate(date, -5, 0));
+  const tenYear = dayAtOrBefore(days, shiftIsoDate(date, -10, 0));
+  const first = days[0] ?? null;
+  const sinceYears = first ? (new Date(`${date}T00:00:00Z`).getTime() - new Date(`${first.date}T00:00:00Z`).getTime()) / (365.25 * 86_400_000) : 0;
+  return {
+    asOfDate: formatDateLabel(date),
+    mo1: percentChange(previousMonthEnd, anchor),
+    qtd: percentChange(previousQuarterEnd, anchor),
+    ytd: percentChange(priorYearEnd, anchor),
+    yr1: percentChange(oneYear, anchor),
+    yr3: annualizedReturn(threeYear, anchor, 3),
+    yr5: annualizedReturn(fiveYear, anchor, 5),
+    yr10: annualizedReturn(tenYear, anchor, 10),
+    sinceInception: sinceYears >= 0.75 ? annualizedReturn(first, anchor, sinceYears) : null,
+  };
+}
+
+function lastPeriodEnd(days: ChartDay[], monthsPerPeriod: number): ChartDay | null {
+  const latest = days[days.length - 1];
+  if (!latest) return null;
+  const [year, month, day] = latest.date.split('-').map(Number);
+  const startMonth = Math.floor((month - 1) / monthsPerPeriod) * monthsPerPeriod;
+  let periodEnd = new Date(Date.UTC(year, startMonth + monthsPerPeriod, 0));
+  if (new Date(`${latest.date}T00:00:00Z`).getTime() < periodEnd.getTime()) periodEnd = new Date(Date.UTC(year, startMonth, 0));
+  return dayAtOrBefore(days, epochToIsoDate(periodEnd.getTime() / 1000));
+}
+
+export function deriveTemaMetrics(chart: ParsedYahooChart): DerivedTemaMetrics {
+  const days = chart.days;
+  const dividends = chart.dividends;
+  const latest = days[days.length - 1] ?? null;
+  const latestDividend = dividends[dividends.length - 1] ?? null;
+  const frequency = inferDistributionFrequency(dividends);
+  let dividendYield: number | null = null;
+  if (latest && latest.close > 0 && dividends.length) {
+    const cutoff = shiftIsoDate(latest.date, -1, 0);
+    const trailing = dividends.filter(dividend => dividend.date >= cutoff && dividend.date <= latest.date).reduce((sum, dividend) => sum + dividend.amount, 0);
+    dividendYield = roundTo(trailing / latest.close * 100, 2);
+  }
+  if (!latest) {
+    return {
+      metrics: { ytd: null, tr1y: null, tr3y: null, tr5y: null, tr10y: null, cagr3y: null, cagr5y: null, cagr10y: null, siAnn: null, dividendYield, secYield: null },
+      monthEnd: { asOfDate: '', mo1: null, qtd: null, ytd: null, yr1: null, yr3: null, yr5: null, yr10: null, sinceInception: null },
+      quarterEnd: { asOfDate: '', mo1: null, qtd: null, ytd: null, yr1: null, yr3: null, yr5: null, yr10: null, sinceInception: null },
+      dividendYield, latestDividend, frequency,
+    };
+  }
+  const latestReturns = rangeReturnAtAnchor(days, latest);
+  const monthAnchor = lastPeriodEnd(days, 1) ?? latest;
+  const quarterAnchor = lastPeriodEnd(days, 3) ?? latest;
+  const monthEnd = rangeReturnAtAnchor(days, monthAnchor);
+  const quarterEnd = rangeReturnAtAnchor(days, quarterAnchor);
+  const cagr3y = latestReturns.yr3;
+  const cagr5y = latestReturns.yr5;
+  const cagr10y = latestReturns.yr10;
+  return {
+    metrics: {
+      ytd: latestReturns.ytd,
+      tr1y: latestReturns.yr1,
+      tr3y: cagr3y === null ? null : roundTo(((1 + cagr3y / 100) ** 3 - 1) * 100, 2),
+      tr5y: cagr5y === null ? null : roundTo(((1 + cagr5y / 100) ** 5 - 1) * 100, 2),
+      tr10y: cagr10y === null ? null : roundTo(((1 + cagr10y / 100) ** 10 - 1) * 100, 2),
+      cagr3y,
+      cagr5y,
+      cagr10y,
+      siAnn: latestReturns.sinceInception,
+      dividendYield,
+      secYield: null,
+    },
+    monthEnd,
+    quarterEnd,
+    dividendYield,
+    latestDividend,
+    frequency,
+  };
+}
+
+export type NportAccession = { accession: string; filed: string; reportDate: string; url: string };
+export type NportSeriesRef = { cik: string; seriesId: string; classId: string };
+export type ParsedNport = {
+  regName: string;
+  regCik: string;
+  seriesName: string;
+  seriesId: string;
+  reportDate: string;
+  holdings: Array<Record<string, string>>;
+  netAssets: number | null;
+};
+
+export const TEMA_ETF_TRUST_CIK = '0001944285';
+
+export function nportUrlFor(cik: string, accession: string): string {
+  const numericCik = String(Number(cik.replace(/\D/g, '')));
+  return `https://www.sec.gov/Archives/edgar/data/${numericCik}/${accession.replace(/-/g, '')}/primary_doc.xml`;
+}
+
+export function parseTemaFundTickerTable(payload: unknown, trustCik = TEMA_ETF_TRUST_CIK): Map<string, NportSeriesRef> {
+  const record = recordOf(payload);
+  const fields = Array.isArray(record.fields) ? record.fields.map(value => String(value)) : [];
+  const rows = Array.isArray(record.data) ? record.data : [];
+  const column = (row: unknown[], name: string): string => {
+    const index = fields.indexOf(name);
+    return index >= 0 ? String(row[index] ?? '') : '';
+  };
+  const wantedCik = String(Number(trustCik.replace(/\D/g, '')));
+  const map = new Map<string, NportSeriesRef>();
+  for (const value of rows) {
+    if (!Array.isArray(value)) continue;
+    const ticker = column(value, 'symbol').trim().toUpperCase();
+    const rawCik = column(value, 'cik').replace(/\D/g, '');
+    if (!ticker || String(Number(rawCik)) !== wantedCik) continue;
+    map.set(ticker, {
+      cik: rawCik.padStart(10, '0'),
+      seriesId: column(value, 'seriesId').toUpperCase(),
+      classId: column(value, 'classId').toUpperCase(),
+    });
+  }
+  return map;
+}
+
+export function parseCompanyTickerMap(payload: unknown): Map<string, string> {
+  const map = new Map<string, string>();
+  const records = recordOf(payload);
+  for (const value of Object.values(records)) {
+    const company = recordOf(value);
+    const ticker = String(company.ticker ?? '').trim().toUpperCase();
+    const title = String(company.title ?? '').trim();
+    if (!ticker || !title) continue;
+    map.set(title.toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim(), ticker);
+  }
+  return map;
+}
+
+function decodeXml(value: string): string {
+  return value.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;|&#39;/g, "'");
+}
+
+function xmlTag(xml: string, tag: string): string {
+  const pattern = new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)<\\/${tag}\\s*>`, 'i');
+  const match = pattern.exec(xml);
+  return match ? decodeXml(match[1].replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim() : '';
+}
+
+export function parseNportAccessions(payload: unknown): NportAccession[] {
+  const submissions = recordOf(payload);
+  const recent = recordOf(recordOf(submissions.filings).recent);
+  const forms = Array.isArray(recent.form) ? recent.form : [];
+  const accessions = Array.isArray(recent.accessionNumber) ? recent.accessionNumber : [];
+  const filingDates = Array.isArray(recent.filingDate) ? recent.filingDate : [];
+  const reportDates = Array.isArray(recent.reportDate) ? recent.reportDate : [];
+  const cik = String(submissions.cik ?? TEMA_ETF_TRUST_CIK).replace(/\D/g, '');
+  const result: NportAccession[] = [];
+  for (let index = 0; index < forms.length; index += 1) {
+    if (String(forms[index]).toUpperCase() !== 'NPORT-P') continue;
+    const accession = String(accessions[index] ?? '');
+    if (!accession) continue;
+    result.push({
+      accession,
+      filed: String(filingDates[index] ?? ''),
+      reportDate: String(reportDates[index] ?? ''),
+      url: nportUrlFor(cik, accession),
+    });
+  }
+  return result;
+}
+
+export function parseEdgarAtomFilings(xml: string): NportAccession[] {
+  const result: NportAccession[] = [];
+  for (const match of xml.matchAll(/<entry\b[^>]*>([\s\S]*?)<\/entry>/gi)) {
+    const body = match[1];
+    const form = xmlTag(body, 'filing-type') || xmlTag(body, 'type');
+    if (form && form.toUpperCase() !== 'NPORT-P') continue;
+    const accession = xmlTag(body, 'accession-number') || xmlTag(body, 'accession-nunber');
+    if (!accession) continue;
+    const filingHref = xmlTag(body, 'filing-href');
+    const cik = /\/edgar\/data\/(\d+)\//i.exec(filingHref)?.[1] ?? TEMA_ETF_TRUST_CIK;
+    result.push({
+      accession,
+      filed: xmlTag(body, 'filing-date'),
+      reportDate: xmlTag(body, 'period'),
+      url: nportUrlFor(cik, accession),
+    });
+  }
+  return result;
+}
+
+export function parseNport(xml: string): ParsedNport {
+  const genInfo = /<genInfo\b[^>]*>([\s\S]*?)<\/genInfo\s*>/i.exec(xml)?.[1] ?? xml.slice(0, 4000);
+  const fundInfo = /<fundInfo\b[^>]*>([\s\S]*?)<\/fundInfo\s*>/i.exec(xml)?.[1] ?? '';
+  const holdings: Array<Record<string, string>> = [];
+  for (const match of xml.matchAll(/<invstOrSec\b[^>]*>([\s\S]*?)<\/invstOrSec\s*>/gi)) {
+    const body = match[1];
+    const name = xmlTag(body, 'name') || xmlTag(body, 'title') || 'Unnamed security';
+    const cusip = xmlTag(body, 'cusip');
+    const alternate = /<(?:isin|sedol|other|cusip)\b[^>]*\bvalue=["']([^"']+)["']/i.exec(body)?.[1] ?? '';
+    const identifier = cusip && !/^n\/?a$/i.test(cusip) ? cusip : decodeXml(alternate);
+    const pctValue = numberOrNull(xmlTag(body, 'pctVal'));
+    const marketValue = numberOrNull(xmlTag(body, 'valUSD')) ?? numberOrNull(xmlTag(body, 'curVal'));
+    const shares = xmlTag(body, 'balance');
+    holdings.push({
+      Name: name,
+      Ticker: '',
+      Identifier: identifier || name,
+      Weight: pctValue === null ? '' : String(pctValue),
+      'Market Value': marketValue === null ? '' : String(marketValue),
+      'Shares Held': shares,
+      'Asset Category': xmlTag(body, 'assetCat'),
+      Country: '',
+      Sector: '',
+      Cash: /cash/i.test(xmlTag(body, 'assetCat')) ? 'Yes' : '',
+    });
+  }
+  return {
+    regName: xmlTag(genInfo, 'regName'),
+    regCik: xmlTag(genInfo, 'regCik'),
+    seriesName: xmlTag(genInfo, 'seriesName'),
+    seriesId: xmlTag(genInfo, 'seriesId'),
+    reportDate: normalizeTemaDate(xmlTag(genInfo, 'repPdDate')),
+    holdings,
+    netAssets: numberOrNull(xmlTag(fundInfo, 'netAssets')),
+  };
+}
+
+export function edgarSeriesFilingsUrl(seriesId: string, count = 10): string {
+  const params = new URLSearchParams({ action: 'getcompany', CIK: seriesId.toUpperCase(), type: 'NPORT-P', owner: 'include', count: String(count), output: 'atom' });
+  return `https://www.sec.gov/cgi-bin/browse-edgar?${params.toString()}`;
+}
+
+export function fillNportTickers(rows: Array<Record<string, string>>, tickerMap: Map<string, string>): Array<Record<string, string>> {
+  return rows.map(row => {
+    if (row.Ticker) return row;
+    const key = row.Name.toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim();
+    const ticker = tickerMap.get(key);
+    return ticker ? { ...row, Ticker: ticker } : row;
   });
 }
