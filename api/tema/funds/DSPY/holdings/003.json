@@ -1,0 +1,128 @@
+{
+  "ticker": "DSPY",
+  "page": 3,
+  "pageSize": 250,
+  "totalRows": 509,
+  "headers": [
+    "Name",
+    "Ticker",
+    "Identifier",
+    "Weight",
+    "Market Value",
+    "Shares Held",
+    "Asset Category",
+    "Country",
+    "Sector",
+    "Cash"
+  ],
+  "rows": [
+    {
+      "Name": "PARAMOUNT SKYDANCE CORP",
+      "Ticker": "PSKY",
+      "Identifier": "69932A204",
+      "Weight": "0.01",
+      "Market Value": "62217.59",
+      "Shares Held": "6023",
+      "Asset Category": "Communication Services",
+      "Country": "United States",
+      "Sector": "Communication Services",
+      "Cash": "No"
+    },
+    {
+      "Name": "HENRY SCHEIN INC",
+      "Ticker": "HSIC",
+      "Identifier": "806407102",
+      "Weight": "0.01",
+      "Market Value": "61885.89",
+      "Shares Held": "737",
+      "Asset Category": "Health Care",
+      "Country": "United States",
+      "Sector": "Health Care",
+      "Cash": "No"
+    },
+    {
+      "Name": "ASSURANT INC",
+      "Ticker": "AIZ",
+      "Identifier": "04621X108",
+      "Weight": "0.01",
+      "Market Value": "59814.5",
+      "Shares Held": "227",
+      "Asset Category": "Financials",
+      "Country": "United States",
+      "Sector": "Financials",
+      "Cash": "No"
+    },
+    {
+      "Name": "DAVITA INC",
+      "Ticker": "DVA",
+      "Identifier": "23918K108",
+      "Weight": "0",
+      "Market Value": "27287.52",
+      "Shares Held": "156",
+      "Asset Category": "Health Care",
+      "Country": "United States",
+      "Sector": "Health Care",
+      "Cash": "No"
+    },
+    {
+      "Name": "BUILDERS FIRSTSOURCE INC",
+      "Ticker": "BLDR",
+      "Identifier": "12008R107",
+      "Weight": "0",
+      "Market Value": "1140.2",
+      "Shares Held": "20",
+      "Asset Category": "Industrials",
+      "Country": "United States",
+      "Sector": "Industrials",
+      "Cash": "No"
+    },
+    {
+      "Name": "MOLSON COORS BEVERAGE CO",
+      "Ticker": "TAP",
+      "Identifier": "60871R209",
+      "Weight": "0",
+      "Market Value": "364.7",
+      "Shares Held": "10",
+      "Asset Category": "Consumer Staples",
+      "Country": "United States",
+      "Sector": "Consumer Staples",
+      "Cash": "No"
+    },
+    {
+      "Name": "TRADE DESK INC/THE",
+      "Ticker": "TTD",
+      "Identifier": "88339J105",
+      "Weight": "0",
+      "Market Value": "182.55",
+      "Shares Held": "15",
+      "Asset Category": "Communication Services",
+      "Country": "United States",
+      "Sector": "Communication Services",
+      "Cash": "No"
+    },
+    {
+      "Name": "VYLOR SPINCO",
+      "Ticker": "VYLR",
+      "Identifier": "92892R108",
+      "Weight": "0",
+      "Market Value": "0",
+      "Shares Held": "11319",
+      "Asset Category": "",
+      "Country": "",
+      "Sector": "",
+      "Cash": "No"
+    },
+    {
+      "Name": "TPG INC",
+      "Ticker": "2602335D",
+      "Identifier": "BBG01Y2F01K3",
+      "Weight": "0",
+      "Market Value": "0",
+      "Shares Held": "3327",
+      "Asset Category": "Financials",
+      "Country": "United States",
+      "Sector": "Financials",
+      "Cash": "No"
+    }
+  ]
+}
