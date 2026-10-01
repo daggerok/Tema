@@ -63,28 +63,25 @@ GitHub Personal Access Token: <PASTE_YOUR_TOKEN_HERE>
 ================================================================
 CURRENT STATE
 =============
-- Goal: Implement Tema ETFs holdings-to-watchlist web application in daggerok/Tema matching sibling parity (Bun-only, zero runtime dependencies, static client app + update-data feed).
-- Status: Researched & Baseline Initialized. Repository cloned, clean baseline verified (LICENSE + placeholder README), official ETF brand site researched, data endpoints discovered and verified live, SEC EDGAR CIK confirmed, and self-contained plan embedded. Ready for implementation.
+- Goal: Implement the Tema ETFs holdings-to-watchlist web app in `daggerok/Tema`, matching sibling parity: Bun-only updater, zero runtime dependencies, static client UI, fixture-only offline tests, and isolated live acceptance.
+- Acceptance: Verify official-source ingestion for at least three real tickers; run offline tests/build; complete two isolated live runs and compare hashes; verify UI parity/header behavior; add CI/docs/metadata only within the authorized Tema repository; push the feature branch and open a PR against `main`. Do not merge.
+- Hard constraints: Keep the full plan below; no `00-generic.txt`; no runtime dependencies, `tsconfig.json`, `typescript`, `tsc`, token/config persistence, force-push, or changes outside scope. Preserve existing files and user changes.
+- Authorization: The user explicitly authorized implementation in this repository, scoped commits and pushes to `feat/tema-etfs`, and opening a pull request against `main`. No merge or cross-repository edits are authorized.
 - Repository: https://github.com/daggerok/Tema
-- Branch: main (feature branch feat/tema-etfs to be created during implementation)
-- Pushed remote baseline: main branch with initialized .worklog.txt
+- Baseline reconciliation (2026-10-01): Initial worktree was clean. Local `main` and fetched `origin/main` both pointed to `01b4559177ceaf4095961726f603aada00362e19`; no local changes or divergence. Baseline root files are `.prompt.txt`, `.worklog.txt`, `LICENSE`, and a one-line placeholder `README.md` (`# Tema`), not only LICENSE/README as the older plan text says. No `feat/tema-etfs` branch existed locally or remotely. GitHub REST API reported no open or closed PRs for this repository at audit time. `gh` is not installed.
+- Branch: `feat/tema-etfs`, created locally from the clean `origin/main` baseline. This audit/worklog checkpoint is not yet committed or pushed; the feature branch has not yet been confirmed on origin.
+- Live-source revalidation (2026-10-01): `https://temaetfs.com/funds` and fund pages returned HTTP 200 without a WAF challenge. The current catalog exposes 14 funds: ARMY, CANC, DICE, DISK, DSPY, HLTH, HRTS, LAZR, NASA, PRVT, PSOX, TOLL, VOLT, WELD. This supersedes the older 13-symbol catalog list in PART 2 (which named RSHO and omitted newer DICE/PRVT). Fund pages link to dated HubSpot CSVs of the form `https://temaetfs.com/hubfs/Website/Holdings/{TICKER}-holdings-{MMDDYYYY}.csv` with query cache-busters; parse the page's CSV link instead of hardcoding a date. Direct CSV GETs for VOLT, ARMY, and DSPY returned HTTP 200 and the documented ten-column header. Their response charset is `x-macroman`; decode accordingly. The live sample link date was 09/29/2026. SEC submissions endpoint confirmed `Tema ETF Trust`, CIK `0001944285`, and N-PORT-P filings; Yahoo chart API returned a valid VOLT chart response.
 - Completed:
-  1. Cloned target repository and verified clean baseline state.
-  2. Conducted live research on official ETF issuer portal (https://temaetfs.com/ (catalog at https://temaetfs.com/funds)).
-  3. Discovered and verified data acquisition pathways (endpoints, holdings formats, WAF characteristics).
-  4. Confirmed SEC EDGAR Trust registrant and CIK (CONFIRMED: 'Tema ETF Trust', CIK 0001944285 (14 active tickers).).
-  5. Established closest sibling reference architecture (daggerok/Global-X or daggerok/NEOS (for per-fund daily CSV handling).).
-  6. Generated complete self-contained implementation plan (generic protocol + brand-specific specifications), eliminating any requirement for 00-generic.txt.
-  7. Committed initialized .worklog.txt into main branch.
-- Next action:
-  1. The next implementing agent starts here: read this .worklog.txt completely.
-  2. Create feature branch `feat/tema-etfs`.
-  3. Live-verify the site endpoints listed in PART 2 below.
-  4. Scaffold repo files from closest sibling (daggerok/Global-X or daggerok/NEOS (for per-fund daily CSV handling).): package.json, bun.lock, index.html, app.tsx, scripts/update-data.ts, scripts/update-data.test.ts, .github/workflows/update-data.yml, .github/dependabot.yml, and README.md.
-  5. Implement data updater matching verified endpoints and run offline tests (bun test scripts/update-data.test.ts).
-  6. Execute isolated acceptance runs (minimum 3 tickers), verify byte-stability across repeat runs.
-  7. Update .worklog.txt after each stage, commit with Conventional Commits, and push to feature branch.
-- Blockers: None. Ready for feature branch implementation.
+  1. Read all 824 lines of this self-contained worklog before implementation.
+  2. Reconciled the actual working tree, `main`, `origin/main`, remote feature refs, and PR state; identified the stale root-file/catalog facts above.
+  3. Created `feat/tema-etfs` from the verified baseline.
+  4. Revalidated catalog, per-fund holdings link behavior, CSV schema/encoding, SEC CIK, and Yahoo chart access live.
+- Active: Pin the precise sibling commits/files for UI, updater, README, dependency pins, and shared workflow; then implement in small tested checkpoints.
+- Remaining: Build updater/parser/derived data and offline tests; run Bun build/type-safety review; perform two isolated live acceptance runs for at least three tickers with hash comparison; copy/adapt sibling UI within the enumerated substitutions and mandatory shared-header rule; add workflow/Dependabot/docs; verify final diff and open the PR.
+- Tooling at audit: `bun` and `gh` are not installed; Node and Python are present. Install/use Bun for required tests. Do not place the user-supplied PAT in a file, URL, Git config, or worklog; use runtime-only authentication for pushes/API calls.
+- Last confirmed pushed SHA: `01b4559177ceaf4095961726f603aada00362e19` on `main`. No feature-branch commit has been pushed yet.
+- Blockers: None known. GitHub API is readable without authentication; push/PR authentication still needs runtime setup.
+- Exact next action: Commit this reconciliation/live-research checkpoint with a scoped Conventional Commit, push `feat/tema-etfs`, and verify its remote SHA. Then pin sibling source revisions and proceed with implementation.
 
 AUTHORITY / USER AMENDMENTS
 ==========================
@@ -95,6 +92,16 @@ AUTHORITY / USER AMENDMENTS
 
 CHRONOLOGICAL JOURNAL
 =====================
+### 2026-10-01 — Recovery audit, feature branch, and live-source revalidation (completed locally; first checkpoint pending push)
+- Fully read `.worklog.txt` (824 lines, 52,397 bytes) before changing code. Compared its CURRENT STATE with Git and remote state instead of assuming the old baseline description was current.
+- `git fetch origin --prune`; the initial tree was clean and local `main` matched `origin/main` at `01b4559177ceaf4095961726f603aada00362e19`. Actual root contents also include `.prompt.txt`; `README.md` is exactly `# Tema`. There was no local or remote `feat/tema-etfs` branch. GitHub REST `GET /repos/daggerok/Tema/pulls?state=all` returned an empty list; `gh` is unavailable. Created local `feat/tema-etfs` from the clean baseline. No PR exists yet.
+- Live GETs to `https://temaetfs.com/funds` and `/volt` returned HTTP 200 and normal HTML, not a WAF challenge. The current catalog's 14 fund routes are ARMY, CANC, DICE, DISK, DSPY, HLTH, HRTS, LAZR, NASA, PRVT, PSOX, TOLL, VOLT, and WELD. This is a verified correction to the older PART 2 list (RSHO is no longer a listed fund; DICE and PRVT are present).
+- Fund pages for VOLT, ARMY, and DSPY expose one `Download Holdings (CSV)` link each. Direct requests to their linked HubSpot files returned HTTP 200, `text/csv; charset=x-macroman`; all share the exact header `holdings_date,ticker,cusip,proper_name,shares,market_value,percent_of_nav,is_cash,country,sector`. Sample links used the 09/29/2026 holdings date. URLs include changing cache-buster query parameters, so the implementation should parse the link from the page rather than hardcode the date or query string. The observed path pattern is `/hubfs/Website/Holdings/{TICKER}-holdings-{MMDDYYYY}.csv`.
+- `https://data.sec.gov/submissions/CIK0001944285.json` returned HTTP 200 and identified `Tema ETF Trust` (entity type `investment`) with recent N-PORT-P filings. Yahoo Finance `query1.finance.yahoo.com/v8/finance/chart/VOLT?range=5d&interval=1d` returned HTTP 200 with a VOLT chart result.
+- Queried the public sibling refs to pin candidate sources: Global-X `main` `415402c3ca157bbf2885f2c8361d74d3a96d0d5a`, NEOS `main` `17f348f904f65048a76dd39fa3dfdf38188abf2b`, JPMorgan `main` `8ce0ddca58b5459dd7df98f22463fb31afa82f2b`. Exact source-file selection and README baseline remain the next task.
+- Changed path: `.worklog.txt` only. Tests/build: not applicable to this research checkpoint. Bun is not installed in the initial environment; install it before implementation validation. No credentials were written to disk or logs.
+- Expected: a clean feature branch rooted at the latest `origin/main`, no existing PR, and issuer CSV access. Actual: all three matched; the prior worklog's root-file and catalog facts needed the corrections recorded above.
+
 ### 2026-09-28 — Initial research, baseline audit, and planning (completed)
 - Cloned https://github.com/daggerok/Tema at main branch.
 - Verified repository contents: LICENSE (MIT) and minimal README.md.
