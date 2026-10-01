@@ -1297,3 +1297,110 @@ export async function writeFundPages(
   await removeStalePageFiles(directory, new Set(names.map(name => name.split('/')[1])));
   return { pages: names, pageSize, totalRows: rows.length, asOfDate, source };
 }
+
+export type HttpGate = { pace: () => Promise<void> };
+export type HttpClientOptions = {
+  gate: HttpGate;
+  retries: number;
+  userAgent: string;
+  fetchImpl?: typeof fetch;
+  sleep?: (milliseconds: number) => Promise<void>;
+  now?: () => number;
+};
+export type PacedHttpClient = { fetch: (input: string | URL, init?: RequestInit) => Promise<Response> };
+
+export function isRetryableHttpStatus(status: number): boolean {
+  return [408, 425, 429, 500, 502, 503, 504].includes(status);
+}
+
+export function retryDelayMilliseconds(retryAfter: string | null, attempt: number, now = Date.now()): number {
+  if (retryAfter) {
+    const seconds = Number(retryAfter.trim());
+    if (Number.isFinite(seconds) && seconds >= 0) return Math.min(120_000, Math.round(seconds * 1000));
+    const at = Date.parse(retryAfter);
+    if (Number.isFinite(at)) return Math.max(0, Math.min(120_000, at - now));
+  }
+  return Math.min(30_000, 500 * 2 ** Math.max(0, attempt));
+}
+
+/** Fetch wrapper with per-provider pacing, bounded retries, and no request-header logging. */
+export function createPacedHttpClient(options: HttpClientOptions): PacedHttpClient {
+  if (!Number.isSafeInteger(options.retries) || options.retries < 0) throw new Error(`retries must be a non-negative integer, got ${options.retries}`);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const sleep = options.sleep ?? (milliseconds => new Promise(resolveSleep => setTimeout(resolveSleep, milliseconds)));
+  const now = options.now ?? Date.now;
+  return {
+    async fetch(input, init = {}): Promise<Response> {
+      let lastError: unknown;
+      for (let attempt = 0; attempt <= options.retries; attempt += 1) {
+        await options.gate.pace();
+        const headers = new Headers(init.headers);
+        if (options.userAgent && !headers.has('user-agent')) headers.set('user-agent', options.userAgent);
+        try {
+          const response = await fetchImpl(input, { ...init, headers });
+          if (attempt >= options.retries || !isRetryableHttpStatus(response.status)) return response;
+          const delay = retryDelayMilliseconds(response.headers.get('retry-after'), attempt, now());
+          await response.body?.cancel().catch(() => undefined);
+          await sleep(delay);
+        } catch (error) {
+          if (init.signal?.aborted || attempt >= options.retries) throw error;
+          lastError = error;
+          await sleep(retryDelayMilliseconds(null, attempt, now()));
+        }
+      }
+      throw lastError instanceof Error ? lastError : new Error('HTTP request failed after retries');
+    },
+  };
+}
+
+export function createProviderHttpClients(config: Pick<UpdaterConfig, 'concurrency' | 'requestSleepSeconds' | 'maxRetries' | 'secUserAgent'>, fetchImpl?: typeof fetch) {
+  const make = (userAgent: string) => createPacedHttpClient({
+    gate: createRequestGate(config.concurrency, Math.round(config.requestSleepSeconds * 1000)),
+    retries: config.maxRetries,
+    userAgent,
+    ...(fetchImpl ? { fetchImpl } : {}),
+  });
+  return {
+    issuer: make('Mozilla/5.0 (compatible; TemaETFWatchlist/1.0)'),
+    yahoo: make('Mozilla/5.0 (compatible; TemaETFWatchlist/1.0)'),
+    sec: make(config.secUserAgent),
+  };
+}
+
+function safeRequestPath(input: string | URL): string {
+  try {
+    const url = new URL(input);
+    return `${url.host}${url.pathname}`;
+  } catch {
+    return 'request';
+  }
+}
+
+export async function responseText(client: PacedHttpClient, input: string | URL, init?: RequestInit): Promise<string> {
+  const response = await client.fetch(input, init);
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => undefined);
+    const statusText = response.statusText.trim();
+    throw new Error(`HTTP ${response.status}${statusText ? ` ${statusText}` : ''} for ${safeRequestPath(input)}`);
+  }
+  return response.text();
+}
+
+export async function responseBytes(client: PacedHttpClient, input: string | URL, init?: RequestInit): Promise<{ bytes: Uint8Array; contentType: string }> {
+  const response = await client.fetch(input, init);
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => undefined);
+    const statusText = response.statusText.trim();
+    throw new Error(`HTTP ${response.status}${statusText ? ` ${statusText}` : ''} for ${safeRequestPath(input)}`);
+  }
+  return { bytes: new Uint8Array(await response.arrayBuffer()), contentType: response.headers.get('content-type') ?? '' };
+}
+
+export async function responseJson(client: PacedHttpClient, input: string | URL, init?: RequestInit): Promise<unknown> {
+  const text = await responseText(client, input, init);
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new Error(`Invalid JSON response from ${safeRequestPath(input)}`);
+  }
+}

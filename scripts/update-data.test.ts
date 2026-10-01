@@ -8,7 +8,9 @@ import { describe, expect, test } from 'bun:test';
 import {
   buildPages,
   buildIndexDocument,
+  createPacedHttpClient,
   createRequestGate,
+  isRetryableHttpStatus,
   decodeTemaCsv,
   deriveTemaMetrics,
   edgarSeriesFilingsUrl,
@@ -46,6 +48,8 @@ import {
   passesFundFilters,
   passesRange,
   readUpdaterConfig,
+  responseText,
+  retryDelayMilliseconds,
   samePublishedContent,
   shiftIsoDate,
   writeJsonIfChanged,
@@ -595,5 +599,61 @@ describe('Tema static page writes', () => {
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
+  });
+});
+
+describe('paced HTTP client', () => {
+  test('retries 429 responses with Retry-After, preserves the user agent, and paces each attempt', async () => {
+    const responses = [
+      new Response('busy', { status: 429, headers: { 'retry-after': '2' } }),
+      new Response('ready', { status: 200 }),
+    ];
+    const waits: number[] = [];
+    const userAgents: Array<string | null> = [];
+    let paced = 0;
+    const client = createPacedHttpClient({
+      gate: { pace: async () => { paced += 1; } },
+      retries: 1,
+      userAgent: 'Tema test runner example@example.com',
+      fetchImpl: async (_input, init) => {
+        userAgents.push(new Headers(init?.headers).get('user-agent'));
+        return responses.shift()!;
+      },
+      sleep: async milliseconds => { waits.push(milliseconds); },
+      now: () => 0,
+    });
+    const response = await client.fetch('https://example.test/data');
+    expect(response.status).toBe(200);
+    expect(paced).toBe(2);
+    expect(waits).toEqual([2000]);
+    expect(userAgents).toEqual(['Tema test runner example@example.com', 'Tema test runner example@example.com']);
+  });
+
+  test('retries transient network failures with bounded backoff and identifies non-retryable statuses', async () => {
+    const waits: number[] = [];
+    let requests = 0;
+    const client = createPacedHttpClient({
+      gate: { pace: async () => undefined },
+      retries: 1,
+      userAgent: 'test',
+      fetchImpl: async () => {
+        requests += 1;
+        if (requests === 1) throw new Error('temporary network failure');
+        return new Response('ok', { status: 200 });
+      },
+      sleep: async milliseconds => { waits.push(milliseconds); },
+    });
+    expect((await client.fetch('https://example.test/data')).status).toBe(200);
+    expect(requests).toBe(2);
+    expect(waits).toEqual([500]);
+    expect(isRetryableHttpStatus(429)).toBe(true);
+    expect(isRetryableHttpStatus(503)).toBe(true);
+    expect(isRetryableHttpStatus(403)).toBe(false);
+    expect(retryDelayMilliseconds('Wed, 21 Oct 2015 07:28:02 GMT', 0, Date.parse('Wed, 21 Oct 2015 07:28:00 GMT'))).toBe(2000);
+  });
+
+  test('does not echo query values when reporting an unsuccessful response', async () => {
+    const client = createPacedHttpClient({ gate: { pace: async () => undefined }, retries: 0, userAgent: 'test', fetchImpl: async () => new Response('denied', { status: 403 }) });
+    await expect(responseText(client, 'https://example.test/private?token=must-not-leak')).rejects.toThrow('HTTP 403 for example.test/private');
   });
 });
