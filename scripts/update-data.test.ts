@@ -18,7 +18,9 @@ import {
   yahooHistoryRows,
   createNportResolver,
   createPacedHttpClient,
+  filterFundFromIndex,
   hasDataDependentFilters,
+  main,
   outputHasOutputFilters,
   outputPrintConfig,
   outputPrintFilter,
@@ -56,6 +58,7 @@ import {
   parseTemaFundTickerTable,
   parseNport,
   parseNportAccessions,
+  passesStaticFundFilters,
   parseEdgarAtomFilings,
   SEC_COMPANY_TICKERS_MF_URL,
   SEC_SUBMISSIONS_URL,
@@ -69,6 +72,7 @@ import {
   readUpdaterConfig,
   responseText,
   retryDelayMilliseconds,
+  runUpdater,
   samePublishedContent,
   shiftIsoDate,
   writeJsonIfChanged,
@@ -396,8 +400,9 @@ describe('Tema output, paging, and stable writes', () => {
   });
 
   test('omits unavailable fields but prints real zero values in the shared updater line', () => {
-    const line = outputFundLine(1, 14, 'VOLT', 'updated', { history: 0, holdings: null, aumValue: null, metrics: { dividendYield: 0, secYield: null } });
+    const line = outputFundLine(1, 14, 'VOLT', 'updated', { history: 0, holdings: null, distributions: { rows: [['09/01/2026', '0.2'], ['09/15/2026', '0.1']] }, aumValue: null, metrics: { dividendYield: 0, secYield: null } });
     expect(line).toContain('history=0');
+    expect(line).toContain('divs=2');
     expect(line).toContain('div=0');
     expect(line).not.toContain('holdings=null');
     expect(line).not.toContain('netAssets=null');
@@ -828,6 +833,139 @@ describe('Tema CLI help and console contracts', () => {
       expect(lines).toEqual([help]);
     } finally {
       console.log = log;
+    }
+  });
+});
+
+describe('Tema updater orchestration with offline provider fixtures', () => {
+  test('writes sibling-compatible static files, stays byte-stable, and retains data after provider failures', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'tema-runner-test-'));
+    const csvUrl = 'https://temaetfs.com/hubfs/Website/Holdings/VOLT-holdings-09292026.csv?cache=changing';
+    const catalogHtml = '<a href="https://temaetfs.com/volt">VOLT Electrification ETF</a>';
+    const pageHtml = `${fundPageFixture}<a href="${csvUrl}">Download Holdings (CSV)</a>`;
+    const epoch = (date: string) => Date.parse(`${date}T00:00:00Z`) / 1000;
+    const chartPayload = { chart: { result: [{
+      meta: { longName: 'VOLT ETF', exchangeName: 'Nasdaq', currency: 'USD', regularMarketPrice: 35.85 },
+      timestamp: [epoch('2026-09-28'), epoch('2026-09-29')],
+      indicators: { quote: [{ close: [35.8, 35.85] }], adjclose: [{ adjclose: [35.8, 35.84] }] },
+      events: { dividends: {
+        first: { date: epoch('2026-03-01'), amount: 0.2 },
+        second: { date: epoch('2026-06-01'), amount: 0.2 },
+        third: { date: epoch('2026-09-01'), amount: 0.25 },
+      } },
+    }] } };
+    const ok = (body: string, contentType = 'text/html') => new Response(body, { status: 200, headers: { 'content-type': contentType } });
+    let secRequests = 0;
+    const healthyClients = {
+      issuer: { fetch: async (input: string | URL) => {
+        const url = String(input);
+        if (url === 'https://temaetfs.com/funds') return ok(catalogHtml);
+        if (url === 'https://temaetfs.com/volt') return ok(pageHtml);
+        if (url.startsWith('https://temaetfs.com/hubfs/')) return ok(holdingsFixture, 'text/csv; charset=x-macroman');
+        return new Response('not found', { status: 404 });
+      } },
+      yahoo: { fetch: async () => ok(JSON.stringify(chartPayload), 'application/json') },
+      sec: { fetch: async () => { secRequests += 1; return new Response('unexpected SEC request', { status: 403 }); } },
+    };
+    const config = readUpdaterConfig({ OUTPUT_DIR: directory, TICKERS: 'VOLT', REQUEST_SLEEP: '0', MAX_RETRIES: '0' });
+    const log = console.log;
+    console.log = () => undefined;
+    const snapshot = async (): Promise<string> => {
+      const files: Array<[string, string]> = [];
+      async function visit(path: string): Promise<void> {
+        const entries = await readdir(path, { withFileTypes: true });
+        for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+          const child = join(path, entry.name);
+          if (entry.isDirectory()) await visit(child);
+          else files.push([child.slice(directory.length + 1), await readFile(child, 'utf8')]);
+        }
+      }
+      await visit(directory);
+      return JSON.stringify(files);
+    };
+    try {
+      const first = await runUpdater(config, healthyClients);
+      expect(first).toMatchObject({ catalogCount: 1, selectedCount: 1, updatedCount: 1, failures: 0, holdings: 3, history: 2 });
+      expect(secRequests).toBe(0);
+      const index = JSON.parse(await readFile(join(directory, 'index.json'), 'utf8'));
+      expect(index.funds[0]).toMatchObject({ ticker: 'VOLT', holdings: 3, history: 2, dataFile: './funds/VOLT/meta.json' });
+      const meta = JSON.parse(await readFile(join(directory, 'funds', 'VOLT', 'meta.json'), 'utf8'));
+      expect(meta.holdings.pages).toEqual(['holdings/001.json']);
+      expect(meta.history.pages).toEqual(['history/001.json']);
+      expect(meta.source.holdingsDownload).toBe('https://temaetfs.com/hubfs/Website/Holdings/VOLT-holdings-09292026.csv');
+      expect(meta.source.nportFiling).toBeNull();
+      const firstSnapshot = await snapshot();
+
+      const second = await runUpdater(config, healthyClients);
+      expect(second.updatedCount).toBe(1);
+      expect(await snapshot()).toBe(firstSnapshot);
+
+      const failingClients = {
+        issuer: { fetch: async (input: string | URL) => String(input) === 'https://temaetfs.com/funds' ? ok(catalogHtml) : new Response('unavailable', { status: 503 }) },
+        yahoo: { fetch: async () => new Response('unavailable', { status: 503 }) },
+        sec: { fetch: async () => new Response('disabled', { status: 403 }) },
+      };
+      const retentionConfig = readUpdaterConfig({ OUTPUT_DIR: directory, TICKERS: 'VOLT', REQUEST_SLEEP: '0', MAX_RETRIES: '0', EDGAR_FALLBACK: 'false' });
+      const retained = await runUpdater(retentionConfig, failingClients);
+      expect(retained).toMatchObject({ selectedCount: 1, updatedCount: 0, skippedCount: 1, failures: 0, holdings: 3, history: 2 });
+      expect(await snapshot()).toBe(firstSnapshot);
+    } finally {
+      console.log = log;
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('Tema catalog and data filter projections', () => {
+  test('separates static ticker/category filters from updated metric filters', () => {
+    const config = readUpdaterConfig({ TICKERS: 'VOLT', CATEGORY: 'equity', AUM: '500M:1B', TOTAL_RETURN_1Y: '10:' });
+    expect(passesStaticFundFilters({ ticker: 'VOLT' }, 'Equity', config)).toBe(true);
+    expect(passesStaticFundFilters({ ticker: 'DSPY' }, 'Equity', config)).toBe(false);
+    expect(passesStaticFundFilters({ ticker: 'VOLT' }, 'Fixed Income', config)).toBe(false);
+    const filter = filterFundFromIndex({
+      ticker: 'VOLT', category: 'Equity', aumValue: 734149760, terValue: 0.75,
+      metrics: { ytd: 4, tr1y: 18, tr3y: 42, tr5y: null, tr10y: null, dividendYield: 1.2, secYield: null },
+      returns: { monthEnd: { asOfDate: 'Sep 29 2026', ytd: 4, yr1: 18, yr3: 12, yr5: null, yr10: null } },
+    });
+    expect(filter).toMatchObject({ ticker: 'VOLT', category: 'Equity', aumValue: 734149760, dividendYield: 1.2, totalReturn: { '1Y': 18, '3Y': 42 } });
+    expect(passesFundFilters(filter, config)).toBe(true);
+    expect(passesFundFilters({ ...filter, aumValue: 200_000_000 }, config)).toBe(false);
+  });
+});
+
+describe('Tema bounded updater cursor', () => {
+  test('writes the last processed ticker and resumes after it on the next capped run', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'tema-cursor-test-'));
+    const catalogHtml = '<a href="https://temaetfs.com/volt">VOLT Electrification ETF</a><a href="https://temaetfs.com/army">ARMY International Defense ETF</a>';
+    const requestedPages: string[] = [];
+    const clients = {
+      issuer: { fetch: async (input: string | URL) => {
+        const url = String(input);
+        if (url === 'https://temaetfs.com/funds') return new Response(catalogHtml, { status: 200 });
+        requestedPages.push(url);
+        return new Response('unavailable', { status: 503 });
+      } },
+      yahoo: { fetch: async () => new Response('disabled', { status: 403 }) },
+      sec: { fetch: async () => new Response('disabled', { status: 403 }) },
+    };
+    const config = readUpdaterConfig({ OUTPUT_DIR: directory, MAX_FETCHES: '1', REQUEST_SLEEP: '0', CONCURRENCY: '1', MAX_RETRIES: '0', EDGAR_FALLBACK: 'false', SKIP_YAHOO: 'true' });
+    const log = console.log;
+    console.log = () => undefined;
+    try {
+      const first = await runUpdater(config, clients);
+      expect(first).toMatchObject({ selectedCount: 1, updatedCount: 0, failures: 1 });
+      expect(requestedPages).toEqual(['https://temaetfs.com/army']);
+      expect(JSON.parse(await readFile(join(directory, 'update-state.json'), 'utf8'))).toEqual({ cursor: 'ARMY' });
+
+      const second = await runUpdater(config, clients);
+      expect(second).toMatchObject({ selectedCount: 1, updatedCount: 0, skippedCount: 1, failures: 0 });
+      expect(requestedPages).toEqual(['https://temaetfs.com/army', 'https://temaetfs.com/volt']);
+      expect(JSON.parse(await readFile(join(directory, 'update-state.json'), 'utf8'))).toEqual({ cursor: 'VOLT' });
+      const index = JSON.parse(await readFile(join(directory, 'index.json'), 'utf8'));
+      expect(index.funds.map((fund: { ticker: string }) => fund.ticker)).toEqual(['ARMY', 'VOLT']);
+    } finally {
+      console.log = log;
+      await rm(directory, { recursive: true, force: true });
     }
   });
 });

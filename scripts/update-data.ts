@@ -4,7 +4,6 @@
 import { mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 /** Tema ETFs updater. Pure parsing helpers are exported for offline fixture tests. */
 
@@ -697,7 +696,10 @@ export function outputCreateReporter(root: string, total: number) {
     before: (ticker: string) => outputInspectFund(root, ticker),
     async result(ticker: string, before: FundSnapshot, status?: string, reason?: unknown, extra: Record<string, unknown> = {}): Promise<void> {
       const after = await outputInspectFund(root, ticker);
-      console.log(outputFundLine(++completed, total, ticker, status ?? (before.digest === after.digest ? 'unchanged' : 'updated'), { ...after.meta, ...extra }, reason));
+      const reportData = { ...after.meta, ...extra };
+      const publishedDistributions = recordOf(after.meta.distributions);
+      if (outputCount(reportData.distributions) === null && outputCount(publishedDistributions) !== null) reportData.distributions = publishedDistributions;
+      console.log(outputFundLine(++completed, total, ticker, status ?? (before.digest === after.digest ? 'unchanged' : 'updated'), reportData, reason));
     },
   };
 }
@@ -1612,7 +1614,6 @@ export type TemaMetaBuildInput = {
 export function buildTemaFundMeta(input: TemaMetaBuildInput): Record<string, unknown> {
   const { fund, page, chart, derived, nport } = input;
   const latestDay = chart?.days.at(-1) ?? null;
-  const latestDividend = derived?.latestDividend ?? chart?.dividends.at(-1) ?? null;
   const latestPrice = chart?.regularMarketPrice ?? latestDay?.close ?? null;
   const netAssets = page?.aumValue ?? nport?.report.netAssets ?? null;
   const name = page?.name && page.name !== fund.ticker ? page.name : nport?.report.seriesName || fund.name;
@@ -1624,17 +1625,8 @@ export function buildTemaFundMeta(input: TemaMetaBuildInput): Record<string, unk
   const holdingsSource = input.holdings?.source ?? '';
   const historySource = input.history?.source ?? '';
   const holdingsDownload = input.holdingsDownloadUrl ? stablePublicUrl(input.holdingsDownloadUrl) : null;
-  const latestDividendDate = latestDividend ? isoDateToUs(latestDividend.date) : null;
-  const latestDividendAmount = latestDividend ? displayNumber(latestDividend.amount, 6) : null;
   const frequencyCode = frequency.paymentsPerYear === 12 ? 'M' : frequency.paymentsPerYear === 4 ? 'Q' : frequency.paymentsPerYear === 2 ? 'S' : frequency.paymentsPerYear === 1 ? 'A' : null;
   const dividendYield = derived?.dividendYield ?? null;
-  const metrics: Record<string, number | string | null> = {
-    ...chartReturns.metrics,
-    dividendYield,
-    dividendYieldText: formatTemaPercent(dividendYield),
-    secYield: null,
-    secYieldText: '—',
-  };
   return {
     generatedAt: input.generatedAt,
     ticker: fund.ticker,
@@ -1677,7 +1669,6 @@ export function buildTemaFundMeta(input: TemaMetaBuildInput): Record<string, unk
       secYieldKind: null,
       unsubsidizedSecYield: null,
     },
-    metrics,
     returns: {
       derivedFrom: 'Yahoo Finance adjusted-close total-return proxy; not official NAV total returns',
       monthEnd: returnSetForMeta(chartReturns.monthEnd),
@@ -1692,10 +1683,13 @@ export function buildTemaFundMeta(input: TemaMetaBuildInput): Record<string, unk
     },
     holdings: input.holdings ?? { pages: [], pageSize: 0, totalRows: 0, asOfDate: '', source: '' },
     history: input.history ?? { pages: [], pageSize: 0, totalRows: 0, asOfDate: '', source: '' },
-    latestDistribution: latestDividendDate && latestDividendAmount ? { exDate: latestDividendDate, amount: latestDividendAmount } : null,
-    holdingsCount: input.holdings?.totalRows ?? 0,
-    historyCount: input.history?.totalRows ?? 0,
   };
+}
+
+function cumulativeReturnFromAnnualized(value: unknown, years: number): number | null {
+  const annualized = numberOrNull(value);
+  if (annualized === null || annualized < -100) return null;
+  return roundTo(((1 + annualized / 100) ** years - 1) * 100, 2);
 }
 
 export function indexFundFromMeta(fund: TemaFund, metaValue: unknown): Record<string, unknown> {
@@ -1707,10 +1701,30 @@ export function indexFundFromMeta(fund: TemaFund, metaValue: unknown): Record<st
   const aum = recordOf(meta.aum);
   const distributions = recordOf(meta.distributions);
   const returns = recordOf(meta.returns);
-  const metrics = recordOf(meta.metrics);
+  const monthEnd = recordOf(returns.monthEnd);
+  const quarterEnd = recordOf(returns.quarterEnd);
+  const yields = recordOf(meta.yields);
   const holdings = recordOf(meta.holdings);
   const history = recordOf(meta.history);
-  const latestDistribution = recordOf(meta.latestDistribution);
+  const distributionRows = Array.isArray(distributions.rows) ? distributions.rows : [];
+  const lastDistributionRow = distributionRows.at(-1);
+  const latestDistribution = Array.isArray(lastDistributionRow) ? lastDistributionRow : [];
+  const metric3Y = numberOrNull(monthEnd.yr3);
+  const metric5Y = numberOrNull(monthEnd.yr5);
+  const metric10Y = numberOrNull(monthEnd.yr10);
+  const metrics = {
+    ytd: numberOrNull(monthEnd.ytd),
+    tr1y: numberOrNull(monthEnd.yr1),
+    tr3y: cumulativeReturnFromAnnualized(metric3Y, 3),
+    tr5y: cumulativeReturnFromAnnualized(metric5Y, 5),
+    tr10y: cumulativeReturnFromAnnualized(metric10Y, 10),
+    cagr3y: metric3Y,
+    cagr5y: metric5Y,
+    cagr10y: metric10Y,
+    siAnn: numberOrNull(monthEnd.sinceInception),
+    dividendYield: numberOrNull(yields.dividendYield),
+    secYield: numberOrNull(yields.secYield),
+  };
   return {
     ticker: fund.ticker,
     name: String(meta.name || fund.name),
@@ -1725,7 +1739,7 @@ export function indexFundFromMeta(fund: TemaFund, metaValue: unknown): Record<st
     navValue: numberOrNull(nav.value),
     aum: aum.display ?? '—',
     aumValue: numberOrNull(aum.value),
-    asOfDate: nav.asOfDate ?? marketPrice.asOfDate ?? '',
+    asOfDate: nav.asOfDate || marketPrice.asOfDate || '',
     inceptionDate: recordOf(meta.inception).fundInceptionDate ?? '',
     exchange: recordOf(meta.inception).exchange ?? '',
     closePrice: marketPrice.display ?? '—',
@@ -1734,8 +1748,8 @@ export function indexFundFromMeta(fund: TemaFund, metaValue: unknown): Record<st
     premiumDiscountValue: numberOrNull(premiumDiscount.value),
     distributions: {
       frequency: distributions.frequency ?? null,
-      exDate: latestDistribution.exDate ?? null,
-      dividend: latestDistribution.amount ?? null,
+      exDate: String(latestDistribution[0] ?? '') || null,
+      dividend: String(latestDistribution[1] ?? '') || null,
     },
     returns: { monthEnd: returns.monthEnd ?? emptyReturnSet(), quarterEnd: returns.quarterEnd ?? emptyReturnSet() },
     metrics,
@@ -1828,4 +1842,421 @@ is unavailable. No network requests are made for --help.`;
 
 export function printHelp(): void {
   console.log(updaterHelpText());
+}
+
+export function passesStaticFundFilters(fund: Pick<TemaFund, 'ticker'>, category: string, config: Pick<UpdaterConfig, 'tickers' | 'categories'>): boolean {
+  if (config.tickers.length && !config.tickers.includes(fund.ticker.toUpperCase())) return false;
+  return !config.categories.length || config.categories.includes(category.toLowerCase());
+}
+
+export function filterFundFromIndex(value: unknown): FilterFund {
+  const row = recordOf(value);
+  const returns = recordOf(row.returns);
+  const monthEnd = recordOf(returns.monthEnd);
+  const metrics = recordOf(row.metrics);
+  const numeric = (item: unknown): number | null => numberOrNull(item);
+  return {
+    ticker: String(row.ticker ?? '').toUpperCase(),
+    category: String(row.category ?? ''),
+    aumValue: numeric(row.aumValue),
+    terValue: numeric(row.terValue),
+    dividendYield: numeric(metrics.dividendYield ?? row.dividendYield),
+    secYield: numeric(metrics.secYield ?? row.secYield),
+    performance: {
+      YTD: numeric(monthEnd.ytd ?? metrics.ytd),
+      '1Y': numeric(monthEnd.yr1 ?? metrics.tr1y),
+      '3Y': numeric(monthEnd.yr3 ?? metrics.cagr3y),
+      '5Y': numeric(monthEnd.yr5 ?? metrics.cagr5y),
+      '10Y': numeric(monthEnd.yr10 ?? metrics.cagr10y),
+    },
+    totalReturn: {
+      YTD: numeric(monthEnd.ytd ?? metrics.ytd),
+      '1Y': numeric(metrics.tr1y),
+      '3Y': numeric(metrics.tr3y),
+      '5Y': numeric(metrics.tr5y),
+      '10Y': numeric(metrics.tr10y),
+    },
+  };
+}
+
+export const TEMA_CATALOG_URL = 'https://temaetfs.com/funds';
+export const SEC_COMPANY_TICKERS_URL = 'https://www.sec.gov/files/company_tickers.json';
+
+function manifestFromPrevious(value: unknown, defaultPageSize: number): PageManifest | null {
+  const manifest = recordOf(value);
+  if (!Array.isArray(manifest.pages)) return null;
+  const pages = manifest.pages.filter((page): page is string => typeof page === 'string');
+  return {
+    pages,
+    pageSize: numberOrNull(manifest.pageSize) ?? defaultPageSize,
+    totalRows: numberOrNull(manifest.totalRows) ?? 0,
+    asOfDate: String(manifest.asOfDate ?? ''),
+    source: String(manifest.source ?? ''),
+  };
+}
+
+function previousCatalogFund(value: unknown): TemaFund | null {
+  const row = recordOf(value);
+  const ticker = String(row.ticker ?? '').trim().toUpperCase();
+  if (!/^[A-Z0-9]{2,5}$/.test(ticker)) return null;
+  const name = typeof row.name === 'string' && row.name.trim() ? row.name.trim() : ticker;
+  const fundPage = typeof row.fundPage === 'string' && row.fundPage.startsWith('https://temaetfs.com/')
+    ? row.fundPage
+    : `https://temaetfs.com/${ticker.toLowerCase()}`;
+  return { ticker, name, fundPage };
+}
+
+function previousRowsByTicker(values: unknown): Map<string, Record<string, unknown>> {
+  const map = new Map<string, Record<string, unknown>>();
+  if (!Array.isArray(values)) return map;
+  for (const value of values) {
+    const row = recordOf(value);
+    const ticker = String(row.ticker ?? '').trim().toUpperCase();
+    if (/^[A-Z0-9]{2,5}$/.test(ticker)) map.set(ticker, row);
+  }
+  return map;
+}
+
+function preservePreviousDividendFrequency(meta: Record<string, unknown>, previousMeta: Record<string, unknown>, chart: ParsedYahooChart | null): void {
+  if (chart && chart.dividends.length >= 3) return;
+  const previousDistributions = recordOf(previousMeta.distributions);
+  if (typeof previousDistributions.frequency !== 'string' || !previousDistributions.frequency) return;
+  const distributions = recordOf(meta.distributions);
+  meta.distributions = {
+    ...distributions,
+    frequency: previousDistributions.frequency,
+    paymentsPerYear: previousDistributions.paymentsPerYear ?? distributions.paymentsPerYear,
+    frequencyCode: previousDistributions.frequencyCode ?? distributions.frequencyCode,
+  };
+}
+
+function candidateIndexRow(fund: TemaFund, meta: Record<string, unknown>, previousIndex: unknown): Record<string, unknown> {
+  const projected = indexFundFromMeta(fund, meta);
+  const fallback = minimalIndexFund(fund, previousIndex);
+  return recordOf(mergePublishedFallback(projected, fallback));
+}
+
+function reconcileFreshSources(meta: Record<string, unknown>, prepared: Pick<PreparedFund, 'holdings' | 'history' | 'nport'>): void {
+  const source = recordOf(meta.source);
+  if (prepared.holdings) {
+    source.holdingsSource = prepared.holdings.source;
+    source.holdingsDownload = prepared.holdings.downloadUrl ? stablePublicUrl(prepared.holdings.downloadUrl) : null;
+    source.nportFiling = prepared.nport?.accession.url ?? null;
+  }
+  if (prepared.history) source.historySource = prepared.history.source;
+  meta.source = source;
+}
+
+function fundFilterPasses(indexRow: Record<string, unknown>, config: UpdaterConfig): boolean {
+  return passesFundFilters(filterFundFromIndex(indexRow), config);
+}
+
+export type UpdaterRunSummary = { catalogCount: number; selectedCount: number; updatedCount: number; skippedCount: number; failures: number; holdings: number; history: number };
+
+type NewHoldingsData = { headers: string[]; rows: Array<Record<string, string>>; asOfDate: string; source: string; downloadUrl: string | null };
+type NewHistoryData = { headers: string[]; rows: Array<Record<string, string>>; asOfDate: string; source: string };
+type PreparedFund = {
+  page: ParsedTemaFundPage | null;
+  holdings: NewHoldingsData | null;
+  history: NewHistoryData | null;
+  chart: ParsedYahooChart | null;
+  derived: DerivedTemaMetrics | null;
+  nport: NportMatch | null;
+  freshSource: boolean;
+  hasPrevious: boolean;
+  meta: Record<string, unknown>;
+  indexRow: Record<string, unknown>;
+};
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function writePreparedFund(outputDir: string, fund: TemaFund, prepared: PreparedFund, previousMeta: Record<string, unknown>, config: UpdaterConfig): Promise<Record<string, unknown>> {
+  let holdingsManifest = manifestFromPrevious(previousMeta.holdings, config.holdingsPageSize);
+  let historyManifest = manifestFromPrevious(previousMeta.history, config.historyPageSize);
+  if (prepared.holdings) {
+    holdingsManifest = await writeFundPages(
+      outputDir, fund.ticker, 'holdings', prepared.holdings.headers, prepared.holdings.rows,
+      config.holdingsPageSize, prepared.holdings.asOfDate, prepared.holdings.source,
+    );
+  }
+  if (prepared.history) {
+    historyManifest = await writeFundPages(
+      outputDir, fund.ticker, 'history', prepared.history.headers, prepared.history.rows,
+      config.historyPageSize, prepared.history.asOfDate, prepared.history.source,
+    );
+  }
+  const generatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const freshMeta = buildTemaFundMeta({
+    fund,
+    page: prepared.page,
+    holdings: holdingsManifest,
+    history: historyManifest,
+    chart: prepared.chart,
+    derived: prepared.derived,
+    holdingsDownloadUrl: prepared.holdings?.downloadUrl ?? null,
+    nport: prepared.nport,
+    generatedAt,
+  });
+  const meta = recordOf(mergePublishedFallback(freshMeta, previousMeta));
+  preservePreviousDividendFrequency(meta, previousMeta, prepared.chart);
+  reconcileFreshSources(meta, prepared);
+  await writeJsonIfChanged(join(outputDir, 'funds', fund.ticker, 'meta.json'), meta);
+  return meta;
+}
+
+/** Run one full or bounded refresh. All provider calls are injected behind paced clients. */
+export async function runUpdater(
+  config: UpdaterConfig = readUpdaterConfig(),
+  clients: ReturnType<typeof createProviderHttpClients> = createProviderHttpClients(config),
+): Promise<UpdaterRunSummary> {
+  outputPrintConfig('Tema ETFs', config);
+  console.log('');
+
+  const indexPath = join(config.outputDir, 'index.json');
+  const statePath = join(config.outputDir, 'update-state.json');
+  const previousIndex = recordOf(await readJsonFile(indexPath));
+  const previousFundValues = Array.isArray(previousIndex.funds) ? previousIndex.funds : [];
+  const previousByTicker = previousRowsByTicker(previousFundValues);
+  let liveCatalog: TemaFund[] = [];
+  let catalogSource = 'temaetfs.com/funds';
+  try {
+    const html = await responseText(clients.issuer, TEMA_CATALOG_URL);
+    liveCatalog = parseTemaCatalog(html, TEMA_CATALOG_URL);
+    if (!liveCatalog.length) throw new Error('Tema catalog contained no ticker-linked fund routes');
+  } catch (error) {
+    outputNote(`[ catalog  ] live Tema catalog unavailable: ${errorMessage(error)}`);
+    liveCatalog = previousFundValues.map(previousCatalogFund).filter((fund): fund is TemaFund => fund !== null);
+    catalogSource = 'previous api/tema/index.json fallback';
+  }
+  if (!liveCatalog.length) throw new Error('No live or previously published Tema catalog entries are available');
+  if (previousFundValues.length && liveCatalog.length < previousFundValues.length / 2) {
+    outputNote(`[ catalog  ] live catalog is unexpectedly small (${liveCatalog.length}); retaining all previously published fund rows`);
+  }
+  const catalog = retainCatalogEntries(liveCatalog, previousFundValues);
+  console.log(`[ catalog  ] ${catalog.length} Tema ETFs (${catalogSource}${liveCatalog.length < catalog.length ? ' + retained previous entries' : ''})`);
+
+  const staticCandidates = catalog.filter(fund => passesStaticFundFilters(fund, 'Equity', config));
+  outputPrintFilter(staticCandidates.length, catalog.length, hasDataDependentFilters(config));
+  const state = recordOf(await readJsonFile(statePath));
+  const cursor = config.maxFetches > 0 && !config.tickers.length && typeof state.cursor === 'string' ? state.cursor : null;
+  const selected = selectUpdateBatch(staticCandidates, cursor, config.maxFetches, config.tickers);
+  if (config.maxFetches > 0) {
+    console.log(`[ cursor   ] selected ${selected.length} of ${staticCandidates.length} eligible funds${cursor ? ` after ${cursor}` : ''}`);
+  }
+
+  const nportResolver = config.edgarFallback ? createNportResolver(clients.sec, { concurrency: config.concurrency }) : null;
+  let companyTickerMapPromise: Promise<Map<string, string>> | null = null;
+  const loadCompanyTickerMap = (): Promise<Map<string, string>> => {
+    if (!companyTickerMapPromise) {
+      companyTickerMapPromise = responseJson(clients.sec, SEC_COMPANY_TICKERS_URL)
+        .then(parseCompanyTickerMap)
+        .catch(error => {
+          outputNote(`SEC company ticker map unavailable: ${errorMessage(error)}`);
+          return new Map<string, string>();
+        });
+    }
+    return companyTickerMapPromise;
+  };
+
+  const output = outputCreateReporter(config.outputDir, selected.length);
+  const queue = selected.map(fund => ({ fund }));
+  const updated = new Map<string, Record<string, unknown>>();
+  let updatedCount = 0;
+  let skippedCount = 0;
+  let failures = 0;
+
+  async function prepareFund(fund: TemaFund): Promise<PreparedFund> {
+    const previousMeta = recordOf(await readJsonFile(join(config.outputDir, 'funds', fund.ticker, 'meta.json')));
+    let pageHtml: string | null = null;
+    let page: ParsedTemaFundPage | null = null;
+    try {
+      pageHtml = await responseText(clients.issuer, fund.fundPage);
+      try {
+        page = parseTemaFundPage(pageHtml, fund.ticker, fund.name);
+      } catch (error) {
+        outputNote(`[ product  ] ${fund.ticker}: ${errorMessage(error)}`);
+      }
+    } catch (error) {
+      outputNote(`[ product  ] ${fund.ticker}: ${errorMessage(error)}`);
+    }
+
+    let holdings: NewHoldingsData | null = null;
+    if (pageHtml) {
+      try {
+        const downloadUrl = findTemaHoldingsCsvUrl(pageHtml, fund.ticker, fund.fundPage);
+        const downloaded = await responseBytes(clients.issuer, downloadUrl);
+        const parsed = parseTemaHoldingsCsv(decodeTemaCsv(downloaded.bytes, downloaded.contentType));
+        if (!parsed.rows.length) throw new Error('official holdings CSV contains no security rows');
+        holdings = {
+          headers: parsed.headers,
+          rows: parsed.rows,
+          asOfDate: parsed.asOfDate,
+          source: `Tema official daily holdings CSV (${parsed.asOfDate})`,
+          downloadUrl,
+        };
+      } catch (error) {
+        outputNote(`[ holdings ] ${fund.ticker}: official CSV unavailable: ${errorMessage(error)}`);
+      }
+    }
+
+    let nport: NportMatch | null = null;
+    if (!holdings && nportResolver) {
+      try {
+        const match = await nportResolver({ ticker: fund.ticker, name: page?.name || fund.name });
+        if (match?.report.holdings.length) {
+          nport = match;
+          const tickerMap = await loadCompanyTickerMap();
+          holdings = {
+            headers: [...HOLDINGS_HEADERS],
+            rows: fillNportTickers(match.report.holdings, tickerMap),
+            asOfDate: match.report.reportDate,
+            source: `SEC EDGAR N-PORT-P fallback (${match.accession.accession}; report ${match.report.reportDate})`,
+            downloadUrl: null,
+          };
+          outputNote(`[ edgar    ] ${fund.ticker}: ${holdings.source}`);
+        } else {
+          outputNote(`[ edgar    ] ${fund.ticker}: no matching recent N-PORT positions; keeping published holdings`);
+        }
+      } catch (error) {
+        outputNote(`[ edgar    ] ${fund.ticker}: ${errorMessage(error)}`);
+      }
+    }
+
+    let chart: ParsedYahooChart | null = null;
+    let derived: DerivedTemaMetrics | null = null;
+    let history: NewHistoryData | null = null;
+    if (!config.skipYahoo) {
+      try {
+        chart = parseYahooChart(await responseJson(clients.yahoo, yahooChartUrl(fund.ticker, config.historyRange)));
+        derived = deriveTemaMetrics(chart);
+        const rows = yahooHistoryRows(chart);
+        if (rows.length) {
+          history = {
+            headers: [...HISTORY_HEADERS],
+            rows,
+            asOfDate: chart.days.at(-1)?.date ?? '',
+            source: 'Yahoo Finance public chart history (adjusted close used for total-return estimates)',
+          };
+        } else {
+          outputNote(`[ history  ] ${fund.ticker}: Yahoo returned no daily closes; keeping published history`);
+        }
+      } catch (error) {
+        outputNote(`[ history  ] ${fund.ticker}: Yahoo chart unavailable: ${errorMessage(error)}`);
+      }
+    }
+
+    const previousHoldings = manifestFromPrevious(previousMeta.holdings, config.holdingsPageSize);
+    const previousHistory = manifestFromPrevious(previousMeta.history, config.historyPageSize);
+    const previewHoldings = holdings
+      ? buildPageManifest(fund.ticker, 'holdings', holdings.headers, holdings.rows, config.holdingsPageSize, holdings.asOfDate, holdings.source)
+      : previousHoldings;
+    const previewHistory = history
+      ? buildPageManifest(fund.ticker, 'history', history.headers, history.rows, config.historyPageSize, history.asOfDate, history.source)
+      : previousHistory;
+    const freshMeta = buildTemaFundMeta({
+      fund,
+      page,
+      holdings: previewHoldings,
+      history: previewHistory,
+      chart,
+      derived,
+      holdingsDownloadUrl: holdings?.downloadUrl ?? null,
+      nport,
+      generatedAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
+    });
+    const meta = recordOf(mergePublishedFallback(freshMeta, previousMeta));
+    preservePreviousDividendFrequency(meta, previousMeta, chart);
+    reconcileFreshSources(meta, { holdings, history, nport });
+    const indexRow = candidateIndexRow(fund, meta, previousByTicker.get(fund.ticker));
+    const freshSource = page !== null || holdings !== null || history !== null || (chart !== null && chart.dividends.length > 0);
+    const hasPrevious = previousByTicker.has(fund.ticker) || Object.keys(previousMeta).length > 0;
+    return { page, holdings, history, chart, derived, nport, freshSource, hasPrevious, meta, indexRow };
+  }
+
+  async function worker(): Promise<void> {
+    for (;;) {
+      const item = queue.shift();
+      if (!item) return;
+      const fund = item.fund;
+      const before = await output.before(fund.ticker);
+      try {
+        const prepared = await prepareFund(fund);
+        if (!prepared.freshSource) {
+          skippedCount += 1;
+          await output.result(fund.ticker, before, prepared.hasPrevious ? 'skipped' : 'failed', prepared.hasPrevious ? 'all providers unavailable; previous data retained' : 'no source data available');
+          if (!prepared.hasPrevious) failures += 1;
+          continue;
+        }
+        if (!fundFilterPasses(prepared.indexRow, config)) {
+          skippedCount += 1;
+          await output.result(fund.ticker, before, 'skipped', 'does not match configured output filters');
+          continue;
+        }
+        const previousMeta = recordOf(await readJsonFile(join(config.outputDir, 'funds', fund.ticker, 'meta.json')));
+        const meta = await writePreparedFund(config.outputDir, fund, prepared, previousMeta, config);
+        const row = candidateIndexRow(fund, meta, previousByTicker.get(fund.ticker));
+        updated.set(fund.ticker, row);
+        updatedCount += 1;
+        await output.result(fund.ticker, before, undefined, undefined, row);
+      } catch (error) {
+        failures += 1;
+        await output.result(fund.ticker, before, 'failed', errorMessage(error));
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(Math.max(1, config.concurrency), Math.max(1, queue.length)) }, () => worker()));
+
+  const indexFunds = catalog.map(fund => {
+    const fresh = updated.get(fund.ticker);
+    if (fresh) return fresh;
+    return minimalIndexFund(fund, previousByTicker.get(fund.ticker));
+  }).sort((a, b) => String(a.ticker).localeCompare(String(b.ticker)));
+  const generatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const index = buildIndexDocument(indexFunds, generatedAt, generatedAt);
+  await writeJsonIfChanged(indexPath, index);
+
+  if (config.maxFetches > 0 && !config.tickers.length && selected.length) {
+    const lastTicker = selected[selected.length - 1].ticker;
+    await writeJsonIfChanged(statePath, { cursor: lastTicker });
+    console.log(`[ cursor   ] batch of ${selected.length} reached — next run continues after ${lastTicker}`);
+  } else if (config.maxFetches === 0) {
+    await removeFileIfExists(statePath);
+  }
+
+  const indexRecord = recordOf(await readJsonFile(indexPath));
+  const counts = recordOf(indexRecord.counts);
+  const summary: UpdaterRunSummary = {
+    catalogCount: catalog.length,
+    selectedCount: selected.length,
+    updatedCount,
+    skippedCount,
+    failures,
+    holdings: numberOrNull(counts.holdings) ?? 0,
+    history: numberOrNull(counts.history) ?? 0,
+  };
+  console.log('');
+  console.log(`[ done     ] ${updatedCount} funds updated, ${skippedCount} skipped, ${failures} failures`);
+  console.log(`[ done     ] counts: ${catalog.length} funds / ${summary.holdings.toLocaleString('en-US')} holdings rows / ${summary.history.toLocaleString('en-US')} history rows`);
+  if (config.maxFetches === 0) console.log('[ cursor   ] full pass complete (cursor reset)');
+  return summary;
+}
+
+export async function main(args: string[] = process.argv.slice(2)): Promise<void> {
+  const unknown = args.filter(arg => arg !== '--help' && arg !== '-h');
+  if (unknown.length) throw new Error(`Unknown argument${unknown.length > 1 ? 's' : ''}: ${unknown.join(' ')}`);
+  if (args.includes('--help') || args.includes('-h')) {
+    printHelp();
+    return;
+  }
+  await runUpdater(readUpdaterConfig());
+}
+
+if (import.meta.main) {
+  void main().catch(error => {
+    console.error(`[ error    ] ${errorMessage(error)}`);
+    process.exitCode = 1;
+  });
 }
