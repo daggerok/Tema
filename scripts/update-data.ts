@@ -1773,3 +1773,59 @@ function stablePublicUrl(value: string): string {
     return value;
   }
 }
+
+export function outputHasOutputFilters(config: UpdaterConfig): boolean {
+  return outputConfigEntries(config).some(([name, value]) =>
+    /^(TICKERS|CATEGORY|AUM|TER|DIVIDEND_YIELD|SEC_YIELD|PERFORMANCE_|TOTAL_RETURN_)/.test(name) &&
+    !['', ':', 'null', 'all'].includes(value));
+}
+
+export function hasDataDependentFilters(config: UpdaterConfig): boolean {
+  return rangeActive(config.aumRange) || rangeActive(config.terRange) || rangeActive(config.dividendYieldRange) || rangeActive(config.secYieldRange) ||
+    RETURN_PERIODS.some(period => rangeActive(config.performanceRanges[period]) || rangeActive(config.totalReturnRanges[period]));
+}
+
+export function outputPrintConfig(brand: string, config: UpdaterConfig): void {
+  const entries: Array<[string, string]> = [...outputConfigEntries(config), ['VERBOSE', String(outputVerbose())]];
+  console.log(`[ config   ] ${brand} updater:\n${entries.map(([key, value]) => `              ${key}=${/TOKEN|PASSWORD|SECRET|COOKIE/i.test(key) ? '<redacted>' : outputClean(value)}`).join('\n')}`);
+}
+
+export function outputPrintFilter(selected: number, total: number, deferred = false): void {
+  console.log(`[ filter   ] ${selected} of ${total} funds ${deferred ? 'selected for evaluation (data-dependent filters applied per fund)' : 'pass filters'}`);
+}
+
+export function updaterHelpText(): string {
+  return `Tema ETFs static data updater
+Usage: bun scripts/update-data.ts [--help|-h]
+
+Environment controls (all optional):
+  MAX_FETCHES=0                 0 runs the full catalog; a positive value limits a resumable batch
+  REQUEST_SLEEP=1               minimum seconds between requests per provider lane
+  CONCURRENCY=2                 independently paced worker lanes per provider
+  MAX_RETRIES=2                 retries for network/408/425/429/5xx errors
+  TICKERS="VOLT ARMY DSPY"      comma/space/semicolon-separated fund allowlist
+  CATEGORY=equity               comma/semicolon-separated category allowlist (Tema default: Equity)
+  AUM=MIN:MAX                   USD bounds or nano/micro/small/mid/large presets
+  TER=MIN:MAX                   total expense ratio percentage bounds
+  DIVIDEND_YIELD=MIN:MAX        trailing-12-month distribution yield bounds, in percent
+  SEC_YIELD=MIN:MAX             SEC-yield percentage bounds (unavailable values do not match an active bound)
+  PERFORMANCE_{YTD,1Y,3Y,5Y,10Y}=MIN:MAX
+  TOTAL_RETURN_{YTD,1Y,3Y,5Y,10Y}=MIN:MAX
+  HOLDINGS_PAGE_SIZE=250        holdings rows per static JSON page
+  HISTORY_PAGE_SIZE=1000        history rows per static JSON page
+  HISTORY_RANGE=max             max history or a bounded range such as 10y
+  OUTPUT_DIR=api/tema           static API output directory
+  EDGAR_FALLBACK=true           use SEC N-PORT-P for holdings when Tema CSV/page data is unavailable
+  SKIP_YAHOO=false              retain prior history instead of requesting Yahoo when true
+  SEC_UA="Company contact@example.org" descriptive SEC User-Agent; set a real contact address when deploying
+  VERBOSE=false                 show per-request/per-fund retry and fallback notices
+
+A full run always ignores and clears the saved MAX_FETCHES cursor. TICKERS filters
+which funds are processed; CATEGORY and data-dependent bounds are applied before
+or during evaluation. The updater retains previously published data when a source
+is unavailable. No network requests are made for --help.`;
+}
+
+export function printHelp(): void {
+  console.log(updaterHelpText());
+}

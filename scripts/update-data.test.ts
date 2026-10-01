@@ -18,6 +18,12 @@ import {
   yahooHistoryRows,
   createNportResolver,
   createPacedHttpClient,
+  hasDataDependentFilters,
+  outputHasOutputFilters,
+  outputPrintConfig,
+  outputPrintFilter,
+  printHelp,
+  updaterHelpText,
   createRequestGate,
   isRetryableHttpStatus,
   decodeTemaCsv,
@@ -788,5 +794,40 @@ describe('Tema metadata and index projection', () => {
       { metric: null, zero: 0, frequency: 'Unknown', rows: [], child: { value: '—' } },
       { metric: 3.5, zero: 9, frequency: 'Quarterly', rows: [1], child: { value: 'kept', old: true } },
     )).toEqual({ metric: 3.5, zero: 0, frequency: 'Unknown', rows: [1], child: { value: 'kept', old: true } });
+  });
+});
+
+describe('Tema CLI help and console contracts', () => {
+  test('prints the shared padded config/filter lines and detects data-dependent filters', () => {
+    const log = console.log;
+    const lines: string[] = [];
+    console.log = (...values: unknown[]) => { lines.push(values.map(String).join(' ')); };
+    try {
+      const config = readUpdaterConfig({ TICKERS: 'VOLT DSPY', REQUEST_SLEEP: '0.5' });
+      outputPrintConfig('Tema ETFs', config);
+      outputPrintFilter(2, 14, true);
+      expect(outputHasOutputFilters(config)).toBe(true);
+      expect(hasDataDependentFilters(config)).toBe(false);
+      expect(hasDataDependentFilters(readUpdaterConfig({ AUM: 'micro' }))).toBe(true);
+      expect(lines[0]).toContain('[ config   ] Tema ETFs updater:');
+      expect(lines[0]).toContain('MAX_FETCHES=0');
+      expect(lines[1]).toBe('[ filter   ] 2 of 14 funds selected for evaluation (data-dependent filters applied per fund)');
+    } finally {
+      console.log = log;
+    }
+  });
+
+  test('documents every supported environment control and performs no network work for help', () => {
+    const help = updaterHelpText();
+    for (const item of ['MAX_FETCHES', 'REQUEST_SLEEP', 'CONCURRENCY', 'MAX_RETRIES', 'TICKERS', 'CATEGORY', 'AUM', 'TER', 'DIVIDEND_YIELD', 'SEC_YIELD', 'PERFORMANCE_', 'TOTAL_RETURN_', 'HOLDINGS_PAGE_SIZE', 'HISTORY_PAGE_SIZE', 'HISTORY_RANGE', 'OUTPUT_DIR', 'EDGAR_FALLBACK', 'SKIP_YAHOO', 'SEC_UA', 'VERBOSE']) expect(help).toContain(item);
+    const log = console.log;
+    const lines: string[] = [];
+    console.log = (...values: unknown[]) => { lines.push(values.map(String).join(' ')); };
+    try {
+      printHelp();
+      expect(lines).toEqual([help]);
+    } finally {
+      console.log = log;
+    }
   });
 });
