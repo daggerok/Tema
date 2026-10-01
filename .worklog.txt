@@ -80,7 +80,7 @@ CURRENT STATE
 - Last confirmed pushed SHA: `546f4b1b0028a413f7e06f57e20030f0c303cd79` on `origin/feat/tema-etfs`.
 - Validation: latest offline suite — 68 tests, 396 assertions (includes updater, UI, README and workflow guards); updater build — 89.36 KB; app browser-target build — 89.17 KB; CLI `--help`, workflow input mapping and Bun-only/no-tsc policy scan passed. Live Chromium checks passed at desktop and 320px touch viewport. No semantic TypeScript checker is available; this limitation remains explicit.
 - Blockers: Sandbox GitHub push auth remains unavailable; use a verified bundle for publication, as in the last checkpoint. GitHub Pages returns 404 and `SEC_UA` is not configured; README marks Pages pending and the workflow fails closed until the owner sets a monitored SEC contact. PRVT holdings/history have the dated-source caveats above. Preserve source labels and don't interpret an empty observed dividend list as proof of no distributions.
-- Exact next action: Create and verify a fast-forward bundle from `origin/feat/tema-etfs` at `546f4b1` through local `HEAD` (CI, README and this worklog checkpoint), present it to the user, and verify the remote after their push; then continue metadata and final PR work.
+- Exact next action: Present the verified bundle containing the local CI/README/worklog commits for the user to push as a normal fast-forward; after confirmation, fetch and verify the remote SHA before continuing with metadata and final PR work.
 
 AUTHORITY / USER AMENDMENTS
 ==========================
