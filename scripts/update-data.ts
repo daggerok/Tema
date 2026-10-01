@@ -1,6 +1,11 @@
 #!/usr/bin/env bun
 /// <reference types="bun" />
 
+import { mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 /** Tema ETFs updater. Pure parsing helpers are exported for offline fixture tests. */
 
 export type TemaFund = {
@@ -316,4 +321,418 @@ export function parseTemaHoldingsCsv(text: string): ParsedTemaHoldings {
   }
   if (!asOfDate) throw new Error('holdings CSV has no valid holdings_date');
   return { headers: [...HOLDINGS_HEADERS], rows, sourceHeaders, asOfDate, totalRows: rows.length };
+}
+
+export type NumericRange = { min: number | null; max: number | null; source: string };
+export type ReturnPeriod = 'YTD' | '1Y' | '3Y' | '5Y' | '10Y';
+export type RangeMap = Record<ReturnPeriod, NumericRange>;
+
+const RETURN_PERIODS: ReturnPeriod[] = ['YTD', '1Y', '3Y', '5Y', '10Y'];
+const EMPTY_RANGE: NumericRange = { min: null, max: null, source: ':' };
+
+export type UpdaterConfig = {
+  maxFetches: number;
+  requestSleepSeconds: number;
+  concurrency: number;
+  maxRetries: number;
+  holdingsPageSize: number;
+  historyPageSize: number;
+  outputDir: string;
+  tickers: string[];
+  categories: string[];
+  aumRange: NumericRange;
+  terRange: NumericRange;
+  dividendYieldRange: NumericRange;
+  secYieldRange: NumericRange;
+  performanceRanges: RangeMap;
+  totalReturnRanges: RangeMap;
+  edgarFallback: boolean;
+  skipYahoo: boolean;
+};
+
+/** Read a canonical env name first, then older aliases; blank strings use the next source. */
+export function envValue(env: Record<string, string | undefined>, name: string, aliases: string[] = []): string | undefined {
+  for (const key of [name, ...aliases]) {
+    const value = env[key];
+    if (value !== undefined && value.trim() !== '') return value.trim();
+  }
+  return undefined;
+}
+
+export function parsePositiveInt(raw: string | undefined, fallback: number, allowZero = false): number {
+  if (raw === undefined || raw.trim() === '') return fallback;
+  if (!/^\d+$/.test(raw.trim())) throw new Error(`expected a ${allowZero ? 'non-negative' : 'positive'} integer, got ${raw}`);
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < (allowZero ? 0 : 1)) {
+    throw new Error(`expected a ${allowZero ? 'non-negative' : 'positive'} integer, got ${raw}`);
+  }
+  return value;
+}
+
+export function parseDecimal(raw: string | undefined, fallback: number): number {
+  if (raw === undefined || raw.trim() === '') return fallback;
+  const value = Number(raw.trim());
+  if (!Number.isFinite(value) || value < 0) throw new Error(`expected a non-negative decimal, got ${raw}`);
+  return value;
+}
+
+/** Parse AUM money bounds. Bare numbers are USD; K/M/B/T suffixes are accepted. */
+export function parseAumBound(bound: string): number | undefined {
+  const text = bound.trim().replace(/[,$\s]/g, '').toLowerCase();
+  if (!text) return undefined;
+  const match = /^([+-]?(?:\d+(?:\.\d*)?|\.\d+))([kmbt])?$/.exec(text);
+  if (!match) throw new Error(`invalid AUM bound: ${bound}`);
+  const scale = match[2] === 'k' ? 1e3 : match[2] === 'm' ? 1e6 : match[2] === 'b' ? 1e9 : match[2] === 't' ? 1e12 : 1;
+  const value = Number(match[1]) * scale;
+  if (!Number.isFinite(value) || value < 0) throw new Error(`invalid AUM bound: ${bound}`);
+  return value;
+}
+
+function parseRangeFilter(raw: string | undefined, name: string, parseBound: (value: string) => number | undefined = value => {
+  if (!value.trim()) return undefined;
+  const parsed = Number(value.trim().replace(/%$/, ''));
+  if (!Number.isFinite(parsed)) throw new Error(`invalid ${name} bound: ${value}`);
+  return parsed;
+}): NumericRange {
+  const source = raw === undefined || raw.trim() === '' ? ':' : raw.trim();
+  if (source === ':') return { ...EMPTY_RANGE };
+  const separator = source.indexOf(':');
+  if (separator < 0 || source.indexOf(':', separator + 1) >= 0) throw new Error(`${name} must use MIN:MAX syntax, got ${source}`);
+  const min = parseBound(source.slice(0, separator));
+  const max = parseBound(source.slice(separator + 1));
+  if (min !== undefined && max !== undefined && min > max) throw new Error(`${name} minimum exceeds maximum: ${source}`);
+  return { min: min ?? null, max: max ?? null, source };
+}
+
+function parseAumRange(raw: string | undefined): NumericRange {
+  const source = raw === undefined || raw.trim() === '' ? ':' : raw.trim();
+  const presets: Record<string, NumericRange> = {
+    nano: { min: null, max: 10_000_000, source },
+    micro: { min: 10_000_000, max: 300_000_000, source },
+    small: { min: 300_000_000, max: 2_000_000_000, source },
+    mid: { min: 2_000_000_000, max: 10_000_000_000, source },
+    large: { min: 10_000_000_000, max: null, source },
+  };
+  return presets[source.toLowerCase()] ?? parseRangeFilter(source, 'AUM', parseAumBound);
+}
+
+export function parseRanges(env: Record<string, string | undefined>, prefix: 'PERFORMANCE' | 'TOTAL_RETURN'): RangeMap {
+  return {
+    YTD: parseRangeFilter(envValue(env, `${prefix}_YTD`), `${prefix}_YTD`),
+    '1Y': parseRangeFilter(envValue(env, `${prefix}_1Y`), `${prefix}_1Y`),
+    '3Y': parseRangeFilter(envValue(env, `${prefix}_3Y`), `${prefix}_3Y`),
+    '5Y': parseRangeFilter(envValue(env, `${prefix}_5Y`), `${prefix}_5Y`),
+    '10Y': parseRangeFilter(envValue(env, `${prefix}_10Y`), `${prefix}_10Y`),
+  };
+}
+
+function parseList(raw: string | undefined): string[] {
+  return raw ? [...new Set(raw.split(/[\s,;]+/).map(value => value.trim()).filter(Boolean))] : [];
+}
+
+function parseCategoryList(raw: string | undefined): string[] {
+  return raw ? [...new Set(raw.split(/[,;]+/).map(value => value.trim().toLowerCase()).filter(Boolean))] : [];
+}
+
+function parseFlag(raw: string | undefined, fallback: boolean): boolean {
+  if (raw === undefined || raw.trim() === '') return fallback;
+  if (/^(1|true|yes|on)$/i.test(raw.trim())) return true;
+  if (/^(0|false|no|off)$/i.test(raw.trim())) return false;
+  throw new Error(`expected true/false, got ${raw}`);
+}
+
+export function readUpdaterConfig(env: Record<string, string | undefined> = process.env): UpdaterConfig {
+  const outputDir = resolve(envValue(env, 'OUTPUT_DIR') ?? 'api/tema');
+  return {
+    maxFetches: parsePositiveInt(envValue(env, 'MAX_FETCHES', ['TEMA_LIMIT']), 0, true),
+    requestSleepSeconds: parseDecimal(envValue(env, 'REQUEST_SLEEP'), 1),
+    concurrency: parsePositiveInt(envValue(env, 'CONCURRENCY'), 2),
+    maxRetries: parsePositiveInt(envValue(env, 'MAX_RETRIES'), 2, true),
+    holdingsPageSize: parsePositiveInt(envValue(env, 'HOLDINGS_PAGE_SIZE'), 250),
+    historyPageSize: parsePositiveInt(envValue(env, 'HISTORY_PAGE_SIZE'), 1000),
+    outputDir,
+    tickers: parseList(envValue(env, 'TICKERS')).map(value => value.toUpperCase()),
+    categories: parseCategoryList(envValue(env, 'CATEGORY', ['ASSET_CLASS'])),
+    aumRange: parseAumRange(envValue(env, 'AUM')),
+    terRange: parseRangeFilter(envValue(env, 'TER'), 'TER'),
+    dividendYieldRange: parseRangeFilter(envValue(env, 'DIVIDEND_YIELD'), 'DIVIDEND_YIELD'),
+    secYieldRange: parseRangeFilter(envValue(env, 'SEC_YIELD'), 'SEC_YIELD'),
+    performanceRanges: parseRanges(env, 'PERFORMANCE'),
+    totalReturnRanges: parseRanges(env, 'TOTAL_RETURN'),
+    edgarFallback: parseFlag(envValue(env, 'EDGAR_FALLBACK'), true),
+    skipYahoo: parseFlag(envValue(env, 'SKIP_YAHOO'), false),
+  };
+}
+
+function rangeActive(range: NumericRange): boolean {
+  return range.min !== null || range.max !== null;
+}
+
+export function passesRange(value: number | null | undefined, range: NumericRange): boolean {
+  if (!rangeActive(range)) return true;
+  if (value === null || value === undefined || !Number.isFinite(value)) return false;
+  return (range.min === null || value >= range.min) && (range.max === null || value <= range.max);
+}
+
+export type FilterFund = {
+  ticker: string;
+  category?: string | null;
+  aumValue?: number | null;
+  terValue?: number | null;
+  dividendYield?: number | null;
+  secYield?: number | null;
+  performance?: Partial<Record<ReturnPeriod, number | null>>;
+  totalReturn?: Partial<Record<ReturnPeriod, number | null>>;
+};
+
+export function passesFundFilters(fund: FilterFund, config: UpdaterConfig): boolean {
+  if (config.tickers.length && !config.tickers.includes(fund.ticker.toUpperCase())) return false;
+  if (config.categories.length && !config.categories.includes((fund.category ?? '').toLowerCase())) return false;
+  if (!passesRange(fund.aumValue, config.aumRange)) return false;
+  if (!passesRange(fund.terValue, config.terRange)) return false;
+  if (!passesRange(fund.dividendYield, config.dividendYieldRange)) return false;
+  if (!passesRange(fund.secYield, config.secYieldRange)) return false;
+  for (const period of RETURN_PERIODS) {
+    if (!passesRange(fund.performance?.[period], config.performanceRanges[period])) return false;
+    if (!passesRange(fund.totalReturn?.[period], config.totalReturnRanges[period])) return false;
+  }
+  return true;
+}
+
+function configRangeValue(range: NumericRange): string {
+  return range.source || `${range.min ?? ''}:${range.max ?? ''}`;
+}
+
+function outputConfigEntries(config: UpdaterConfig): [string, string][] {
+  const values: [string, string][] = [
+    ['MAX_FETCHES', String(config.maxFetches)],
+    ['REQUEST_SLEEP', String(config.requestSleepSeconds)],
+    ['CONCURRENCY', String(config.concurrency)],
+    ['CATEGORY', config.categories.join(',') || 'all'],
+    ['AUM', configRangeValue(config.aumRange)],
+    ['DIVIDEND_YIELD', configRangeValue(config.dividendYieldRange)],
+    ['EDGAR_FALLBACK', String(config.edgarFallback)],
+    ['HISTORY_PAGE_SIZE', String(config.historyPageSize)],
+    ['HOLDINGS_PAGE_SIZE', String(config.holdingsPageSize)],
+    ['MAX_RETRIES', String(config.maxRetries)],
+    ['OUTPUT_DIR', config.outputDir],
+    ['SEC_YIELD', configRangeValue(config.secYieldRange)],
+    ['SKIP_YAHOO', String(config.skipYahoo)],
+    ['TER', configRangeValue(config.terRange)],
+    ['TICKERS', config.tickers.join(',') || 'all'],
+  ];
+  for (const period of RETURN_PERIODS) {
+    values.push([`PERFORMANCE_${period}`, configRangeValue(config.performanceRanges[period])]);
+  }
+  for (const period of RETURN_PERIODS) {
+    values.push([`TOTAL_RETURN_${period}`, configRangeValue(config.totalReturnRanges[period])]);
+  }
+  const first = ['MAX_FETCHES', 'REQUEST_SLEEP', 'CONCURRENCY'];
+  return values.sort(([a], [b]) => {
+    const ai = first.indexOf(a);
+    const bi = first.indexOf(b);
+    return (ai < 0 ? first.length : ai) - (bi < 0 ? first.length : bi) || a.localeCompare(b);
+  });
+}
+
+function outputVerbose(): boolean {
+  return /^(1|true|yes|on)$/i.test(process.env.VERBOSE ?? '');
+}
+
+function outputClean(value: unknown): string {
+  return String(value ?? 'null').replace(/[\r\n\t]+/g, ' ');
+}
+
+function outputNote(message: string): void {
+  if (outputVerbose()) console.warn(message);
+}
+
+function outputPrintConfig(brand: string, config: UpdaterConfig): void {
+  const entries = [...outputConfigEntries(config), ['VERBOSE', String(outputVerbose())] as [string, string]];
+  console.log(`[ config   ] ${brand} updater:\n${entries.map(([key, value]) => `              ${key}=${/TOKEN|PASSWORD|SECRET|COOKIE/i.test(key) ? '<redacted>' : outputClean(value)}`).join('\n')}`);
+}
+
+function outputPrintFilter(selected: number, total: number, deferred = false): void {
+  console.log(`[ filter   ] ${selected} of ${total} funds ${deferred ? 'selected for evaluation (data-dependent filters applied per fund)' : 'pass filters'}`);
+}
+
+function outputHasOutputFilters(config: UpdaterConfig): boolean {
+  if (config.tickers.length || config.categories.length) return true;
+  const ranges = [config.aumRange, config.terRange, config.dividendYieldRange, config.secYieldRange,
+    ...RETURN_PERIODS.map(period => config.performanceRanges[period]),
+    ...RETURN_PERIODS.map(period => config.totalReturnRanges[period])];
+  return ranges.some(rangeActive);
+}
+
+/** Timestamp-insensitive, recursively key-sorted representation for logs and write guards. */
+export function outputStable(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(outputStable);
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return Object.fromEntries(Object.keys(record).sort()
+      .filter(key => !['generatedAt', 'catalogReadAt'].includes(key))
+      .map(key => [key, outputStable(record[key])]));
+  }
+  return value;
+}
+
+export function outputContentKey(value: unknown): string {
+  return JSON.stringify(outputStable(value)) ?? 'null';
+}
+
+export function samePublishedContent(left: unknown, right: unknown): boolean {
+  return outputContentKey(left) === outputContentKey(right);
+}
+
+export type PageFile<T> = { ticker: string; page: number; pageSize: number; totalRows: number; headers: string[]; rows: T[] };
+
+export function buildPages<T>(ticker: string, headers: string[], rows: T[], pageSize: number): PageFile<T>[] {
+  if (!Number.isSafeInteger(pageSize) || pageSize < 1) throw new Error(`pageSize must be a positive integer, got ${pageSize}`);
+  const pages: PageFile<T>[] = [];
+  for (let offset = 0; offset < rows.length; offset += pageSize) {
+    pages.push({ ticker, page: pages.length + 1, pageSize, totalRows: rows.length, headers: [...headers], rows: rows.slice(offset, offset + pageSize) });
+  }
+  return pages;
+}
+
+export function pageFileNames(kind: 'holdings' | 'history', pageCount: number): string[] {
+  return Array.from({ length: pageCount }, (_unused, index) => `${kind}/${String(index + 1).padStart(3, '0')}.json`);
+}
+
+export function outputCount(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (Array.isArray(value)) return value.length;
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    if (typeof record.totalRows === 'number') return record.totalRows;
+    if (Array.isArray(record.rows)) return record.rows.length;
+  }
+  return null;
+}
+
+export function outputScalar(value: unknown): unknown {
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return record.display ?? record.value ?? null;
+  }
+  return value;
+}
+
+export function outputMoney(value: unknown): string {
+  const raw = outputScalar(value);
+  if (raw === null || raw === undefined || raw === '—' || raw === '--') return 'null';
+  const text = String(raw).replace(/[$,\s]/g, '');
+  const match = text.match(/^([+-]?[\d.]+)([KMBT])?$/i);
+  if (!match) return outputClean(raw);
+  const units: Record<string, number> = { K: 1e3, M: 1e6, B: 1e9, T: 1e12 };
+  const number = Number(match[1]) * (match[2] ? units[match[2].toUpperCase()] : 1);
+  if (!Number.isFinite(number)) return 'null';
+  for (const [unit, scale] of [['T', 1e12], ['B', 1e9], ['M', 1e6], ['K', 1e3]] as const) {
+    if (Math.abs(number) >= scale) return `$${(number / scale).toFixed(1)}${unit}`;
+  }
+  return `$${number.toFixed(2)}`;
+}
+
+export function outputFundLine(index: number, total: number, ticker: string, status: string, data: Record<string, unknown> = {}, reason?: unknown): string {
+  const width = Math.max(2, String(total).length);
+  const metrics = data.metrics && typeof data.metrics === 'object' ? data.metrics as Record<string, unknown> : {};
+  const field = (key: string, value: unknown): string =>
+    value === null || value === undefined || value === 'null' ? '' : `${key}=${outputClean(value)}`;
+  const history = data.history ?? data.historyCount;
+  const holdings = data.holdings ?? data.holdingsCount;
+  const distributions = data.distributions ?? data.dividends;
+  const detail = [
+    field('history', outputCount(history)),
+    field('holdings', outputCount(holdings)),
+    field('divs', outputCount(distributions)),
+    field('netAssets', outputMoney(data.aumValue ?? data.aum)),
+    field('div', outputScalar(metrics.dividendYield ?? data.dividendYield)),
+    field('sec', outputScalar(metrics.secYield ?? data.secYield)),
+  ].filter(part => part !== '').join(' ');
+  return `[ ${String(index).padStart(width)}/${String(total).padEnd(width)}  ] ${outputClean(ticker).padEnd(5)} ${status.padEnd(9)}${detail ? ` ${detail}` : ''}${reason ? ` reason=${outputClean(reason)}` : ''}`;
+}
+
+export type FundSnapshot = { digest: string; meta: Record<string, unknown> };
+
+export async function outputInspectFund(root: string, ticker: string): Promise<FundSnapshot> {
+  const dir = join(root, 'funds', ticker);
+  const hash = createHash('sha256');
+  async function visit(path: string): Promise<void> {
+    const entries = await readdir(path, { withFileTypes: true }).catch(() => []);
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      const entryPath = join(path, entry.name);
+      if (entry.isDirectory()) await visit(entryPath);
+      else if (entry.name.endsWith('.json')) {
+        const text = await readFile(entryPath, 'utf8').catch(() => '');
+        hash.update(entryPath.slice(dir.length));
+        try {
+          hash.update(outputContentKey(JSON.parse(text)));
+        } catch {
+          hash.update(text);
+        }
+      }
+    }
+  }
+  await visit(dir);
+  const metaValue = await readFile(join(dir, 'meta.json'), 'utf8').then(JSON.parse).catch(() => ({}));
+  const meta = metaValue && typeof metaValue === 'object' && !Array.isArray(metaValue) ? metaValue as Record<string, unknown> : {};
+  return { digest: hash.digest('hex'), meta };
+}
+
+export function outputCreateReporter(root: string, total: number) {
+  let completed = 0;
+  return {
+    before: (ticker: string) => outputInspectFund(root, ticker),
+    async result(ticker: string, before: FundSnapshot, status?: string, reason?: unknown, extra: Record<string, unknown> = {}): Promise<void> {
+      const after = await outputInspectFund(root, ticker);
+      console.log(outputFundLine(++completed, total, ticker, status ?? (before.digest === after.digest ? 'unchanged' : 'updated'), { ...after.meta, ...extra }, reason));
+    },
+  };
+}
+
+export function createRequestGate(
+  concurrency: number,
+  sleepMilliseconds: number,
+  now: () => number = Date.now,
+  sleep: (milliseconds: number) => Promise<void> = milliseconds => new Promise(resolveSleep => setTimeout(resolveSleep, milliseconds)),
+): { pace: () => Promise<void> } {
+  const laneCount = Math.max(1, Math.floor(concurrency));
+  const lanes = Array.from({ length: laneCount }, () => ({ nextAllowedAt: 0, lastUsed: 0, tail: Promise.resolve() }));
+  let sequence = 0;
+  return {
+    async pace(): Promise<void> {
+      let laneIndex = 0;
+      for (let index = 1; index < lanes.length; index += 1) {
+        if (lanes[index].lastUsed < lanes[laneIndex].lastUsed) laneIndex = index;
+      }
+      const lane = lanes[laneIndex];
+      lane.lastUsed = ++sequence;
+      const work = lane.tail.then(async () => {
+        const waitMilliseconds = Math.max(0, lane.nextAllowedAt - now());
+        if (waitMilliseconds > 0) await sleep(waitMilliseconds);
+        lane.nextAllowedAt = now() + sleepMilliseconds;
+      });
+      lane.tail = work.then(() => undefined, () => undefined);
+      return work;
+    },
+  };
+}
+
+/** Build stable timestamp-insensitive JSON outputs without rewriting unchanged published content. */
+export async function writeJsonIfChanged(filePath: string, value: unknown): Promise<boolean> {
+  await mkdir(dirname(filePath), { recursive: true });
+  const previous = await readFile(filePath, 'utf8').then(JSON.parse).catch(() => null);
+  if (previous !== null && samePublishedContent(previous, value)) return false;
+  await writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  return true;
+}
+
+export async function readJsonFile(filePath: string): Promise<unknown | null> {
+  return readFile(filePath, 'utf8').then(JSON.parse).catch(() => null);
+}
+
+export async function removeFileIfExists(filePath: string): Promise<void> {
+  await unlink(filePath).catch(error => {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  });
 }
