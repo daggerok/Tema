@@ -473,6 +473,57 @@ export function readUpdaterConfig(env: Record<string, string | undefined> = proc
   };
 }
 
+// File defaults and explicit overrides, same mechanism as the sibling updaters:
+// allowlisted scalar controls only, so GitHub Actions can resolve them without
+// interpolating user input into bash. Precedence: config file < advanced JSON <
+// nonblank inputs < environment (the older TEMA_LIMIT / ASSET_CLASS names remain aliases).
+export const CONTROL_NAMES = [
+  'MAX_FETCHES', 'REQUEST_SLEEP', 'CONCURRENCY', 'MAX_RETRIES', 'TICKERS', 'CATEGORY',
+  'AUM', 'TER', 'DIVIDEND_YIELD', 'SEC_YIELD',
+  ...['PERFORMANCE', 'TOTAL_RETURN'].flatMap(prefix => RETURN_PERIODS.map(period => `${prefix}_${period}`)),
+  'HOLDINGS_PAGE_SIZE', 'HISTORY_PAGE_SIZE', 'HISTORY_RANGE', 'OUTPUT_DIR',
+  'EDGAR_FALLBACK', 'SKIP_YAHOO', 'SEC_UA', 'VERBOSE',
+] as const;
+export type ControlName = (typeof CONTROL_NAMES)[number];
+export const CONFIG_FILE_URL = new URL('./update-data.config.json', import.meta.url);
+const CONTROL_ALIASES: Record<string, string[]> = { MAX_FETCHES: ['TEMA_LIMIT'], CATEGORY: ['ASSET_CLASS'] };
+
+export function resolveControls(
+  file: unknown = {},
+  advanced: unknown = {},
+  inputs: unknown = {},
+  env: Record<string, string | undefined> = {},
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  const known = new Set<string>(CONTROL_NAMES);
+  const apply = (value: unknown, skipEmpty = false): void => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Configuration must be a JSON object');
+    for (const [key, raw] of Object.entries(value)) {
+      if (!known.has(key)) throw new Error(`Unknown updater control: ${key}`);
+      if (skipEmpty && (raw === '' || raw === undefined || raw === null)) continue;
+      if (!['string', 'number', 'boolean'].includes(typeof raw)) throw new Error(`${key}: expected string, number or boolean`);
+      const text = String(raw);
+      if (/[\r\n\0]/.test(text)) throw new Error(`${key}: multiline/control characters are not allowed`);
+      result[key] = text;
+    }
+  };
+  apply(file);
+  apply(advanced);
+  apply(inputs, true);
+  for (const key of CONTROL_NAMES) {
+    const value = env[key] ?? (CONTROL_ALIASES[key] ?? []).map(alias => env[alias]).find(item => item !== undefined);
+    if (value !== undefined) apply({ [key]: value });
+  }
+  if (result.VERBOSE && !/^(0|1|true|false|yes|no|on|off)$/i.test(result.VERBOSE.trim())) throw new Error(`VERBOSE: expected boolean, got ${result.VERBOSE}`);
+  readUpdaterConfig(result); // validate every integer, boolean, range and filter before any request or write
+  return result;
+}
+
+export async function runtimeControls(env: Record<string, string | undefined> = process.env): Promise<Record<string, string>> {
+  const file: unknown = JSON.parse(await readFile(CONFIG_FILE_URL, 'utf8'));
+  return resolveControls(file, {}, {}, env);
+}
+
 function rangeActive(range: NumericRange): boolean {
   return range.min !== null || range.max !== null;
 }
@@ -1812,7 +1863,10 @@ export function updaterHelpText(): string {
   return `Tema ETFs static data updater
 Usage: bun scripts/update-data.ts [--help|-h]
 
-Environment controls (all optional):
+Defaults come from scripts/update-data.config.json; environment variables override
+them (the older TEMA_LIMIT and ASSET_CLASS names remain aliases of MAX_FETCHES and CATEGORY).
+
+Controls:
   MAX_FETCHES=0                 0 runs the full catalog; a positive value limits a resumable batch
   REQUEST_SLEEP=1               minimum seconds between requests per provider lane
   CONCURRENCY=2                 independently paced worker lanes per provider
@@ -2251,7 +2305,9 @@ export async function main(args: string[] = process.argv.slice(2)): Promise<void
     printHelp();
     return;
   }
-  await runUpdater(readUpdaterConfig());
+  const controls = await runtimeControls();
+  if (controls.VERBOSE !== undefined) process.env.VERBOSE = controls.VERBOSE;
+  await runUpdater(readUpdaterConfig(controls));
 }
 
 if (import.meta.main) {
