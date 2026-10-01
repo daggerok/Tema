@@ -1,12 +1,13 @@
 /// <reference types="bun" />
 
 import { readFileSync } from 'node:fs';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'bun:test';
 import {
   buildPages,
+  buildIndexDocument,
   createRequestGate,
   decodeTemaCsv,
   deriveTemaMetrics,
@@ -15,6 +16,7 @@ import {
   inferDistributionFrequency,
   envValue,
   findTemaHoldingsCsvUrl,
+  minimalIndexFund,
   normalizeTemaDate,
   nportUrlFor,
   outputContentKey,
@@ -38,6 +40,9 @@ import {
   parseEdgarAtomFilings,
   parseYahooChart,
   yahooChartUrl,
+  retainCatalogEntries,
+  selectUpdateBatch,
+  writeFundPages,
   passesFundFilters,
   passesRange,
   readUpdaterConfig,
@@ -531,5 +536,64 @@ describe('Tema SEC N-PORT fallback parsing', () => {
     expect(parsed.holdings[1].Cash).toBe('');
     const issuers = parseCompanyTickerMap({ '0': { ticker: 'EXM', title: 'Example Public Company Inc' } });
     expect(fillNportTickers(parsed.holdings, issuers)[0].Ticker).toBe('EXM');
+  });
+});
+
+describe('Tema catalog cursor and index builders', () => {
+  test('retains old catalog funds and names when the live route label is only a bare ticker', () => {
+    const current = [
+      { ticker: 'VOLT', name: 'VOLT', fundPage: 'https://temaetfs.com/volt' },
+      { ticker: 'DICE', name: 'DICE Trading & Prediction Markets ETF', fundPage: 'https://temaetfs.com/dice' },
+    ];
+    const previous = [
+      { ticker: 'VOLT', name: 'VOLT Electrification ETF', fundPage: 'https://temaetfs.com/volt', holdings: 27 },
+      { ticker: 'OLDX', name: 'Former Tema ETF', fundPage: 'https://temaetfs.com/oldx', holdings: 8 },
+    ];
+    expect(retainCatalogEntries(current, previous)).toEqual([
+      { ticker: 'DICE', name: 'DICE Trading & Prediction Markets ETF', fundPage: 'https://temaetfs.com/dice' },
+      { ticker: 'OLDX', name: 'Former Tema ETF', fundPage: 'https://temaetfs.com/oldx' },
+      { ticker: 'VOLT', name: 'VOLT Electrification ETF', fundPage: 'https://temaetfs.com/volt' },
+    ]);
+  });
+
+  test('rotates bounded batches after the saved cursor, ignores the cursor for explicit tickers, and returns full runs', () => {
+    const funds = ['ARMY', 'CANC', 'DICE', 'DSPY'].map(ticker => ({ ticker }));
+    expect(selectUpdateBatch(funds, 'CANC', 2).map(fund => fund.ticker)).toEqual(['DICE', 'DSPY']);
+    expect(selectUpdateBatch(funds, 'DSPY', 2).map(fund => fund.ticker)).toEqual(['ARMY', 'CANC']);
+    expect(selectUpdateBatch(funds, 'CANC', 1, ['DSPY', 'ARMY']).map(fund => fund.ticker)).toEqual(['ARMY']);
+    expect(selectUpdateBatch(funds, 'DSPY', 0).map(fund => fund.ticker)).toEqual(['ARMY', 'CANC', 'DICE', 'DSPY']);
+  });
+
+  test('builds a usable blank catalog row and preserves previous published metrics', () => {
+    const blank = minimalIndexFund({ ticker: 'VOLT', name: 'VOLT Electrification ETF', fundPage: 'https://temaetfs.com/volt' });
+    expect(blank).toMatchObject({ ticker: 'VOLT', category: 'Equity', dataFile: './funds/VOLT/meta.json', terValue: null, navValue: null, holdings: 0, history: 0 });
+    const previous = minimalIndexFund({ ticker: 'VOLT', name: 'VOLT Electrification ETF', fundPage: 'https://temaetfs.com/volt' }, { metrics: { ytd: 12 }, holdings: 27, category: 'U.S. Equity' });
+    expect(previous).toMatchObject({ category: 'U.S. Equity', metrics: { ytd: 12 }, holdings: 27, history: 0 });
+  });
+
+  test('counts every retained fund and aggregates its existing data in index.json', () => {
+    const index = buildIndexDocument([
+      { ticker: 'VOLT', holdings: 27, history: 10 },
+      { ticker: 'DSPY', holdings: 506, history: 150 },
+    ], '2026-10-01T00:00:00.000Z', '2026-10-01T00:00:00.000Z');
+    expect(index.counts).toEqual({ funds: 2, holdings: 533, history: 160 });
+    expect(index.source).toMatchObject({ catalog: 'https://temaetfs.com/funds' });
+  });
+});
+
+describe('Tema static page writes', () => {
+  test('writes paginated sheets and removes only stale numbered JSON pages after a successful refresh', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'tema-pages-test-'));
+    try {
+      const first = await writeFundPages(directory, 'VOLT', 'holdings', ['Ticker'], ['A', 'B', 'C', 'D', 'E'].map(Ticker => ({ Ticker })), 2, '2026-09-29', 'fixture');
+      expect(first).toEqual({ pages: ['holdings/001.json', 'holdings/002.json', 'holdings/003.json'], pageSize: 2, totalRows: 5, asOfDate: '2026-09-29', source: 'fixture' });
+      const last = JSON.parse(await readFile(join(directory, 'funds', 'VOLT', 'holdings', '003.json'), 'utf8'));
+      expect(last.rows).toEqual([{ Ticker: 'E' }]);
+      await writeFundPages(directory, 'VOLT', 'holdings', ['Ticker'], [{ Ticker: 'A' }], 2, '2026-09-30', 'fixture');
+      const remaining = await readdir(join(directory, 'funds', 'VOLT', 'holdings'));
+      expect(remaining.sort()).toEqual(['001.json']);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 });

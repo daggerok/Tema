@@ -1170,3 +1170,130 @@ export function fillNportTickers(rows: Array<Record<string, string>>, tickerMap:
     return ticker ? { ...row, Ticker: ticker } : row;
   });
 }
+
+export function retainCatalogEntries(current: TemaFund[], previousValue: unknown): TemaFund[] {
+  const previousRows = Array.isArray(previousValue) ? previousValue : [];
+  const previousByTicker = new Map<string, Record<string, unknown>>();
+  for (const value of previousRows) {
+    const row = recordOf(value);
+    const ticker = String(row.ticker ?? '').trim().toUpperCase();
+    if (ticker) previousByTicker.set(ticker, row);
+  }
+  const currentTickers = new Set(current.map(fund => fund.ticker.toUpperCase()));
+  const merged = current.map(fund => {
+    const previous = previousByTicker.get(fund.ticker.toUpperCase());
+    const oldName = typeof previous?.name === 'string' ? previous.name : '';
+    const name = fund.name === fund.ticker && oldName.length > fund.ticker.length ? oldName : fund.name;
+    return { ...fund, name };
+  });
+  for (const [ticker, previous] of previousByTicker) {
+    if (currentTickers.has(ticker)) continue;
+    const name = typeof previous.name === 'string' && previous.name ? previous.name : ticker;
+    const fundPage = typeof previous.fundPage === 'string' ? previous.fundPage : `https://temaetfs.com/${ticker.toLowerCase()}`;
+    merged.push({ ticker, name, fundPage });
+  }
+  return merged.sort((a, b) => a.ticker.localeCompare(b.ticker));
+}
+
+export function selectUpdateBatch<T extends { ticker: string }>(
+  candidates: T[],
+  lastTicker: string | null,
+  maxFetches: number,
+  explicitTickers: string[] = [],
+): T[] {
+  if (!Number.isSafeInteger(maxFetches) || maxFetches < 0) throw new Error(`MAX_FETCHES must be a non-negative integer, got ${maxFetches}`);
+  const requested = new Set(explicitTickers.map(ticker => ticker.toUpperCase()));
+  const eligible = requested.size ? candidates.filter(item => requested.has(item.ticker.toUpperCase())) : [...candidates];
+  if (maxFetches === 0 || eligible.length <= maxFetches) return eligible;
+  if (requested.size) return eligible.slice(0, maxFetches);
+  const cursor = lastTicker?.toUpperCase() ?? '';
+  const cursorIndex = eligible.findIndex(item => item.ticker.toUpperCase() === cursor);
+  const start = cursorIndex < 0 ? 0 : (cursorIndex + 1) % eligible.length;
+  return Array.from({ length: eligible.length }, (_unused, offset) => eligible[(start + offset) % eligible.length]).slice(0, maxFetches);
+}
+
+function emptyReturnSet(): PeriodReturnMetrics {
+  return { asOfDate: '', mo1: null, qtd: null, ytd: null, yr1: null, yr3: null, yr5: null, yr10: null, sinceInception: null };
+}
+
+export function minimalIndexFund(fund: TemaFund, previousValue: unknown = null): Record<string, unknown> {
+  const previous = recordOf(previousValue);
+  const base: Record<string, unknown> = {
+    ticker: fund.ticker,
+    name: fund.name,
+    category: 'Equity',
+    fundPage: fund.fundPage,
+    dataFile: `./funds/${fund.ticker}/meta.json`,
+    cusip: null,
+    isin: null,
+    ter: '—',
+    terValue: null,
+    nav: '—',
+    navValue: null,
+    aum: '—',
+    aumValue: null,
+    asOfDate: '',
+    inceptionDate: '',
+    exchange: '',
+    closePrice: '—',
+    closePriceValue: null,
+    premiumDiscount: '—',
+    premiumDiscountValue: null,
+    distributions: { frequency: null, exDate: null, dividend: null },
+    returns: { monthEnd: emptyReturnSet(), quarterEnd: emptyReturnSet() },
+    metrics: { ytd: null, tr1y: null, tr3y: null, tr5y: null, tr10y: null, cagr3y: null, cagr5y: null, cagr10y: null, siAnn: null, dividendYield: null, secYield: null },
+    holdings: 0,
+    history: 0,
+  };
+  return { ...base, ...previous, ticker: fund.ticker, name: fund.name, fundPage: fund.fundPage, dataFile: `./funds/${fund.ticker}/meta.json` };
+}
+
+export function buildIndexDocument(funds: Array<Record<string, unknown>>, generatedAt: string, catalogReadAt: string): Record<string, unknown> {
+  return {
+    generatedAt,
+    catalogReadAt,
+    source: {
+      catalog: 'https://temaetfs.com/funds',
+      holdings: 'Tema ETFs official fund pages and daily HubSpot CSVs',
+      history: 'Yahoo Finance chart API (adjusted-close total-return proxy)',
+      nportRegistrant: 'SEC EDGAR Form N-PORT-P, Tema ETF Trust CIK 0001944285 (holdings fallback only)',
+    },
+    counts: {
+      funds: funds.length,
+      holdings: funds.reduce((sum, fund) => sum + (outputCount(fund.holdings) ?? 0), 0),
+      history: funds.reduce((sum, fund) => sum + (outputCount(fund.history) ?? 0), 0),
+    },
+    funds,
+  };
+}
+
+export type PageManifest = { pages: string[]; pageSize: number; totalRows: number; asOfDate: string; source: string };
+
+async function removeStalePageFiles(directory: string, keep: Set<string>): Promise<void> {
+  const entries = await readdir(directory, { withFileTypes: true }).catch(() => []);
+  for (const entry of entries) {
+    if (!entry.isFile() || !/^\d{3}\.json$/.test(entry.name) || keep.has(entry.name)) continue;
+    await unlink(join(directory, entry.name));
+  }
+}
+
+export async function writeFundPages(
+  outputDir: string,
+  ticker: string,
+  kind: 'holdings' | 'history',
+  headers: string[],
+  rows: Array<Record<string, string>>,
+  pageSize: number,
+  asOfDate: string,
+  source: string,
+): Promise<PageManifest> {
+  const directory = join(outputDir, 'funds', ticker, kind);
+  const pages = buildPages(ticker, headers, rows, pageSize);
+  const names = pageFileNames(kind, pages.length);
+  await mkdir(directory, { recursive: true });
+  for (let index = 0; index < pages.length; index += 1) {
+    await writeJsonIfChanged(join(directory, names[index].split('/')[1]), pages[index]);
+  }
+  await removeStalePageFiles(directory, new Set(names.map(name => name.split('/')[1])));
+  return { pages: names, pageSize, totalRows: rows.length, asOfDate, source };
+}
