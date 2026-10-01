@@ -1,0 +1,4 @@
+holdings_date,ticker,cusip,proper_name,shares,market_value,percent_of_nav,is_cash,country,sector
+2026-09-29,BELFB,077347300,BEL FUSE INC,199922,48804958.64,0.0671,0,United States,Information Technology
+2026-09-29,APH,032095101,AMPHENOL CORP,575893,48547779.9,0.0668,0,United States,Information Technology
+2026-09-29,ETN,G29183103,EATON CORP PLC,107327,46119485.17,0.0634,0,Ireland,Industrials
