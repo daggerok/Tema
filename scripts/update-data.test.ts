@@ -8,6 +8,14 @@ import { describe, expect, test } from 'bun:test';
 import {
   buildPages,
   buildIndexDocument,
+  buildPageManifest,
+  buildTemaFundMeta,
+  formatTemaMoney,
+  formatTemaPercent,
+  indexFundFromMeta,
+  mergePublishedFallback,
+  yahooDistributionRows,
+  yahooHistoryRows,
   createNportResolver,
   createPacedHttpClient,
   createRequestGate,
@@ -489,12 +497,13 @@ describe('Tema source encodings and Yahoo chart normalization', () => {
     expect(result.quarterEnd.asOfDate).toBe('Jun 30 2026');
   });
 
-  test('keeps absent dividend history unknown instead of asserting a zero yield', () => {
+  test('keeps absent or insufficient dividend history unknown instead of asserting a zero yield', () => {
     const chart = { days: [{ date: '2026-09-29', close: 10, adjClose: 10, volume: 0 }], dividends: [], exchangeName: '', longName: '', currency: '', regularMarketPrice: 10, regularMarketTime: null, firstTradeDate: null };
     const result = deriveTemaMetrics(chart);
     expect(result.dividendYield).toBe(null);
     expect(result.frequency.frequency).toBe('Unknown');
     expect(inferDistributionFrequency([])).toEqual({ frequency: 'Unknown', paymentsPerYear: null });
+    expect(inferDistributionFrequency([{ date: '2026-07-01', amount: 0.2 }, { date: '2026-09-01', amount: 0.25 }])).toEqual({ frequency: 'Unknown', paymentsPerYear: null });
   });
 });
 
@@ -718,5 +727,66 @@ describe('SEC N-PORT series resolver', () => {
     const privateFund = await resolve({ ticker: 'PRVT', name: 'Tema Private Markets ETF' });
     expect(privateFund?.report.seriesId).toBe('S000PRVT');
     expect(archiveCalls).toEqual([filings[0].accession, filings[1].accession, filings[2].accession]);
+  });
+});
+
+describe('Tema metadata and index projection', () => {
+  test('converts chart prices and distributions into the sibling static-sheet contract', () => {
+    const epoch = (date: string) => Date.parse(`${date}T00:00:00Z`) / 1000;
+    const chart = parseYahooChart({ chart: { result: [{
+      meta: { longName: 'VOLT ETF', regularMarketPrice: 12.35 },
+      timestamp: [epoch('2026-09-28'), epoch('2026-09-29')],
+      indicators: { quote: [{ close: [12.1, 12.35] }], adjclose: [{ adjclose: [12.11, 12.34] }] },
+      events: { dividends: {
+        '1788220800': { date: epoch('2026-08-01'), amount: 0.125 },
+        '1788220801': { date: epoch('2026-09-01'), amount: 0.13 },
+      } },
+    }] } });
+    expect(yahooHistoryRows(chart)).toEqual([
+      { Date: 'Sep 28 2026', NAV: '', 'Market Price': '12.1', 'Premium/Discount': '' },
+      { Date: 'Sep 29 2026', NAV: '', 'Market Price': '12.35', 'Premium/Discount': '' },
+    ]);
+    expect(yahooDistributionRows(chart)).toEqual([['08/01/2026', '0.125'], ['09/01/2026', '0.13']]);
+    expect(buildPageManifest('VOLT', 'history', ['Date'], yahooHistoryRows(chart), 1, '2026-09-29', 'Yahoo')).toEqual({ pages: ['history/001.json', 'history/002.json'], pageSize: 1, totalRows: 2, asOfDate: '2026-09-29', source: 'Yahoo' });
+  });
+
+  test('builds Tema meta/index schemas using official page fields and honest Yahoo/SEC provenance', () => {
+    const fund = { ticker: 'VOLT', name: 'VOLT Electrification ETF', fundPage: 'https://temaetfs.com/volt' };
+    const page = parseTemaFundPage(fundPageFixture, 'VOLT', fund.name);
+    const chart = {
+      exchangeName: 'Nasdaq', longName: 'VOLT ETF', currency: 'USD', regularMarketPrice: 35.85, regularMarketTime: null, firstTradeDate: null,
+      days: [{ date: '2026-09-29', close: 35.85, adjClose: 35.84, volume: 1 }],
+      dividends: [{ date: '2026-07-01', amount: 0.2 }, { date: '2026-09-01', amount: 0.25 }],
+    };
+    const derived = deriveTemaMetrics(chart);
+    const meta = buildTemaFundMeta({
+      fund,
+      page,
+      holdings: { pages: ['holdings/001.json'], pageSize: 250, totalRows: 27, asOfDate: '2026-09-29', source: 'Tema official daily CSV' },
+      history: { pages: ['history/001.json'], pageSize: 1000, totalRows: 1, asOfDate: '2026-09-29', source: 'Yahoo Finance chart API' },
+      chart,
+      derived,
+      holdingsDownloadUrl: 'https://temaetfs.com/hubfs/holdings.csv?cache=changing',
+      nport: null,
+      generatedAt: '2026-10-01T00:00:00.000Z',
+    });
+    expect(meta).toMatchObject({ ticker: 'VOLT', name: 'VOLT Electrification ETF', category: 'Equity' });
+    expect(meta.source).toMatchObject({ yahooChart: 'https://query1.finance.yahoo.com/v8/finance/chart/VOLT', holdingsDownload: 'https://temaetfs.com/hubfs/holdings.csv' });
+    expect(meta.expenseRatio).toMatchObject({ display: '0.75%', value: 0.75, gross: 0.75, net: null });
+    expect(meta.holdings).toMatchObject({ totalRows: 27, pages: ['holdings/001.json'] });
+    expect(meta.distributions).toMatchObject({ frequency: 'Unknown', paymentsPerYear: null, rows: [['07/01/2026', '0.2'], ['09/01/2026', '0.25']] });
+    expect(meta.yields).toMatchObject({ secYield: null, dividendYield: 1.26 });
+    const row = indexFundFromMeta(fund, meta);
+    expect(row).toMatchObject({ ticker: 'VOLT', aumValue: 734149760, navValue: 35.81, closePriceValue: 35.85, holdings: 27, history: 1 });
+    expect(row.distributions).toMatchObject({ frequency: 'Unknown', exDate: '09/01/2026', dividend: '0.25' });
+    expect(formatTemaMoney(734149760)).toBe('$734.15 M');
+    expect(formatTemaPercent(-1)).toBe('-1.00%');
+  });
+
+  test('fills unavailable refreshed fields from the published version without replacing real zero or explicit Unknown', () => {
+    expect(mergePublishedFallback(
+      { metric: null, zero: 0, frequency: 'Unknown', rows: [], child: { value: '—' } },
+      { metric: 3.5, zero: 9, frequency: 'Quarterly', rows: [1], child: { value: 'kept', old: true } },
+    )).toEqual({ metric: 3.5, zero: 0, frequency: 'Unknown', rows: [1], child: { value: 'kept', old: true } });
   });
 });

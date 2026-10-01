@@ -861,7 +861,7 @@ export function yahooChartUrl(ticker: string, historyRange: string, nowSeconds =
 export type FrequencyResult = { frequency: string; paymentsPerYear: number | null };
 
 export function inferDistributionFrequency(dividends: ChartDividend[]): FrequencyResult {
-  if (dividends.length < 2) return { frequency: 'Unknown', paymentsPerYear: null };
+  if (dividends.length < 3) return { frequency: 'Unknown', paymentsPerYear: null };
   const sorted = [...dividends].sort((a, b) => a.date.localeCompare(b.date));
   const recent = sorted.slice(-8);
   const gaps = recent.slice(1).map((item, index) => {
@@ -1535,4 +1535,241 @@ export function createNportResolver(
       throw error;
     }
   };
+}
+
+const HISTORY_HEADERS = ['Date', 'NAV', 'Market Price', 'Premium/Discount'];
+
+export function formatTemaMoney(value: number | null | undefined): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return '—';
+  const absolute = Math.abs(value);
+  for (const [scale, suffix] of [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']] as const) {
+    if (absolute >= scale) return `$${(value / scale).toFixed(2)} ${suffix}`;
+  }
+  return `$${value.toFixed(2)}`;
+}
+
+export function formatTemaPercent(value: number | null | undefined): string {
+  return value === null || value === undefined || !Number.isFinite(value) ? '—' : `${value.toFixed(2)}%`;
+}
+
+function isoDateToUs(isoDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  return match ? `${match[2]}/${match[3]}/${match[1]}` : '';
+}
+
+export function yahooHistoryRows(chart: ParsedYahooChart): Array<Record<string, string>> {
+  return chart.days.map(day => ({
+    Date: formatDateLabel(day.date),
+    NAV: '',
+    'Market Price': displayNumber(day.close, 6),
+    'Premium/Discount': '',
+  }));
+}
+
+export function yahooDistributionRows(chart: ParsedYahooChart): string[][] {
+  return chart.dividends.map(dividend => [isoDateToUs(dividend.date), displayNumber(dividend.amount, 6)]);
+}
+
+export function buildPageManifest(
+  ticker: string,
+  kind: 'holdings' | 'history',
+  headers: string[],
+  rows: Array<Record<string, string>>,
+  pageSize: number,
+  asOfDate: string,
+  source: string,
+): PageManifest {
+  const pageCount = buildPages(ticker, headers, rows, pageSize).length;
+  return { pages: pageFileNames(kind, pageCount), pageSize, totalRows: rows.length, asOfDate, source };
+}
+
+function returnSetForMeta(value: PeriodReturnMetrics): Record<string, unknown> {
+  return {
+    ...value,
+    mo1Text: formatTemaPercent(value.mo1),
+    qtdText: formatTemaPercent(value.qtd),
+    ytdText: formatTemaPercent(value.ytd),
+    yr1Text: formatTemaPercent(value.yr1),
+    yr3Text: formatTemaPercent(value.yr3),
+    yr5Text: formatTemaPercent(value.yr5),
+    yr10Text: formatTemaPercent(value.yr10),
+    sinceInceptionText: formatTemaPercent(value.sinceInception),
+  };
+}
+
+export type TemaMetaBuildInput = {
+  fund: TemaFund;
+  page: ParsedTemaFundPage | null;
+  holdings: PageManifest | null;
+  history: PageManifest | null;
+  chart: ParsedYahooChart | null;
+  derived: DerivedTemaMetrics | null;
+  holdingsDownloadUrl: string | null;
+  nport: NportMatch | null;
+  generatedAt: string;
+};
+
+export function buildTemaFundMeta(input: TemaMetaBuildInput): Record<string, unknown> {
+  const { fund, page, chart, derived, nport } = input;
+  const latestDay = chart?.days.at(-1) ?? null;
+  const latestDividend = derived?.latestDividend ?? chart?.dividends.at(-1) ?? null;
+  const latestPrice = chart?.regularMarketPrice ?? latestDay?.close ?? null;
+  const netAssets = page?.aumValue ?? nport?.report.netAssets ?? null;
+  const name = page?.name && page.name !== fund.ticker ? page.name : nport?.report.seriesName || fund.name;
+  const asOfDate = page?.asOfDate || formatDateLabel(latestDay?.date ?? nport?.report.reportDate ?? '');
+  const dividends = chart ? yahooDistributionRows(chart) : [];
+  const frequency = derived?.frequency ?? { frequency: 'Unknown', paymentsPerYear: null };
+  const chartReturns = derived ?? deriveTemaMetrics({ exchangeName: '', longName: '', currency: '', regularMarketPrice: null, regularMarketTime: null, firstTradeDate: null, days: [], dividends: [] });
+  const stableYahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(fund.ticker)}`;
+  const holdingsSource = input.holdings?.source ?? '';
+  const historySource = input.history?.source ?? '';
+  const holdingsDownload = input.holdingsDownloadUrl ? stablePublicUrl(input.holdingsDownloadUrl) : null;
+  const latestDividendDate = latestDividend ? isoDateToUs(latestDividend.date) : null;
+  const latestDividendAmount = latestDividend ? displayNumber(latestDividend.amount, 6) : null;
+  const frequencyCode = frequency.paymentsPerYear === 12 ? 'M' : frequency.paymentsPerYear === 4 ? 'Q' : frequency.paymentsPerYear === 2 ? 'S' : frequency.paymentsPerYear === 1 ? 'A' : null;
+  const dividendYield = derived?.dividendYield ?? null;
+  const metrics: Record<string, number | string | null> = {
+    ...chartReturns.metrics,
+    dividendYield,
+    dividendYieldText: formatTemaPercent(dividendYield),
+    secYield: null,
+    secYieldText: '—',
+  };
+  return {
+    generatedAt: input.generatedAt,
+    ticker: fund.ticker,
+    name,
+    category: 'Equity',
+    categoryPath: 'Thematic Equity',
+    source: {
+      fundPage: fund.fundPage,
+      catalog: 'https://temaetfs.com/funds',
+      holdingsDownload,
+      yahooChart: stableYahooUrl,
+      nportFiling: nport?.accession.url ?? null,
+      holdingsSource,
+      historySource,
+      provider: 'Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API',
+    },
+    identifiers: { cusip: page?.cusip || null, isin: null, indexTicker: null },
+    inception: {
+      fundInceptionDate: page?.inceptionDate || null,
+      shareClassInceptionDate: null,
+      exchange: page?.exchange || null,
+    },
+    expenseRatio: {
+      display: page?.ter || '—',
+      value: page?.terValue ?? null,
+      gross: page?.terValue ?? null,
+      net: null,
+    },
+    nav: { display: page?.nav || '—', value: page?.navValue ?? null, asOfDate: page?.asOfDate || asOfDate || null },
+    marketPrice: { display: page?.closePrice || formatTemaMoney(latestPrice), value: page?.closePriceValue ?? latestPrice, asOfDate: page?.asOfDate || asOfDate || null },
+    premiumDiscount: { display: page?.premiumDiscount || '—', value: page?.premiumDiscountValue ?? null },
+    aum: { display: page?.aum || formatTemaMoney(netAssets), value: netAssets, asOfDate: page?.asOfDate || (nport ? formatDateLabel(nport.report.reportDate) : null), source: page?.aum ? 'Tema official fund page' : nport ? 'SEC EDGAR N-PORT-P filing' : null },
+    yields: {
+      dividendYield,
+      dividendYieldText: formatTemaPercent(dividendYield),
+      dividendYieldKind: chart?.dividends.length ? 'Trailing 12-month Yahoo Finance chart distributions divided by latest market price' : null,
+      distributionRate: null,
+      secYield: null,
+      secYieldText: '—',
+      secYieldKind: null,
+      unsubsidizedSecYield: null,
+    },
+    metrics,
+    returns: {
+      derivedFrom: 'Yahoo Finance adjusted-close total-return proxy; not official NAV total returns',
+      monthEnd: returnSetForMeta(chartReturns.monthEnd),
+      quarterEnd: returnSetForMeta(chartReturns.quarterEnd),
+    },
+    distributions: {
+      frequency: frequency.frequency,
+      paymentsPerYear: frequency.paymentsPerYear,
+      frequencyCode,
+      headers: ['Ex-Date', 'Amount'],
+      rows: dividends,
+    },
+    holdings: input.holdings ?? { pages: [], pageSize: 0, totalRows: 0, asOfDate: '', source: '' },
+    history: input.history ?? { pages: [], pageSize: 0, totalRows: 0, asOfDate: '', source: '' },
+    latestDistribution: latestDividendDate && latestDividendAmount ? { exDate: latestDividendDate, amount: latestDividendAmount } : null,
+    holdingsCount: input.holdings?.totalRows ?? 0,
+    historyCount: input.history?.totalRows ?? 0,
+  };
+}
+
+export function indexFundFromMeta(fund: TemaFund, metaValue: unknown): Record<string, unknown> {
+  const meta = recordOf(metaValue);
+  const expenseRatio = recordOf(meta.expenseRatio);
+  const nav = recordOf(meta.nav);
+  const marketPrice = recordOf(meta.marketPrice);
+  const premiumDiscount = recordOf(meta.premiumDiscount);
+  const aum = recordOf(meta.aum);
+  const distributions = recordOf(meta.distributions);
+  const returns = recordOf(meta.returns);
+  const metrics = recordOf(meta.metrics);
+  const holdings = recordOf(meta.holdings);
+  const history = recordOf(meta.history);
+  const latestDistribution = recordOf(meta.latestDistribution);
+  return {
+    ticker: fund.ticker,
+    name: String(meta.name || fund.name),
+    category: String(meta.category || 'Equity'),
+    fundPage: fund.fundPage,
+    dataFile: `./funds/${fund.ticker}/meta.json`,
+    cusip: recordOf(meta.identifiers).cusip ?? null,
+    isin: recordOf(meta.identifiers).isin ?? null,
+    ter: expenseRatio.display ?? '—',
+    terValue: numberOrNull(expenseRatio.value),
+    nav: nav.display ?? '—',
+    navValue: numberOrNull(nav.value),
+    aum: aum.display ?? '—',
+    aumValue: numberOrNull(aum.value),
+    asOfDate: nav.asOfDate ?? marketPrice.asOfDate ?? '',
+    inceptionDate: recordOf(meta.inception).fundInceptionDate ?? '',
+    exchange: recordOf(meta.inception).exchange ?? '',
+    closePrice: marketPrice.display ?? '—',
+    closePriceValue: numberOrNull(marketPrice.value),
+    premiumDiscount: premiumDiscount.display ?? '—',
+    premiumDiscountValue: numberOrNull(premiumDiscount.value),
+    distributions: {
+      frequency: distributions.frequency ?? null,
+      exDate: latestDistribution.exDate ?? null,
+      dividend: latestDistribution.amount ?? null,
+    },
+    returns: { monthEnd: returns.monthEnd ?? emptyReturnSet(), quarterEnd: returns.quarterEnd ?? emptyReturnSet() },
+    metrics,
+    holdings: numberOrNull(holdings.totalRows) ?? 0,
+    history: numberOrNull(history.totalRows) ?? 0,
+  };
+}
+
+export function mergePublishedFallback(currentValue: unknown, previousValue: unknown): unknown {
+  if (currentValue === null || currentValue === undefined || currentValue === '' || currentValue === '—' || currentValue === '--') {
+    return previousValue ?? currentValue;
+  }
+  if (Array.isArray(currentValue)) {
+    return currentValue.length ? currentValue : Array.isArray(previousValue) && previousValue.length ? previousValue : currentValue;
+  }
+  if (currentValue && typeof currentValue === 'object') {
+    const current = recordOf(currentValue);
+    const previous = recordOf(previousValue);
+    const result: Record<string, unknown> = {};
+    for (const key of new Set([...Object.keys(previous), ...Object.keys(current)])) {
+      result[key] = mergePublishedFallback(current[key], previous[key]);
+    }
+    return result;
+  }
+  return currentValue;
+}
+
+function stablePublicUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    url.search = '';
+    url.hash = '';
+    return url.href;
+  } catch {
+    return value;
+  }
 }
