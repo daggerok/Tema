@@ -8,6 +8,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   buildPages,
   buildIndexDocument,
+  createNportResolver,
   createPacedHttpClient,
   createRequestGate,
   isRetryableHttpStatus,
@@ -21,6 +22,8 @@ import {
   minimalIndexFund,
   normalizeTemaDate,
   nportUrlFor,
+  nportSeriesMatchesFund,
+  resolveTemaNportSeriesRef,
   outputContentKey,
   outputCount,
   outputFundLine,
@@ -40,6 +43,8 @@ import {
   parseNport,
   parseNportAccessions,
   parseEdgarAtomFilings,
+  SEC_COMPANY_TICKERS_MF_URL,
+  SEC_SUBMISSIONS_URL,
   parseYahooChart,
   yahooChartUrl,
   retainCatalogEntries,
@@ -655,5 +660,63 @@ describe('paced HTTP client', () => {
   test('does not echo query values when reporting an unsuccessful response', async () => {
     const client = createPacedHttpClient({ gate: { pace: async () => undefined }, retries: 0, userAgent: 'test', fetchImpl: async () => new Response('denied', { status: 403 }) });
     await expect(responseText(client, 'https://example.test/private?token=must-not-leak')).rejects.toThrow('HTTP 403 for example.test/private');
+  });
+});
+
+describe('SEC N-PORT series resolver', () => {
+  test('aliases WELD to the legacy RSHO series and matches a series name when the symbol table is stale', () => {
+    const mapping = new Map([
+      ['RSHO', { cik: '0001944285', seriesId: 'S000WELD', classId: 'C0001' }],
+      ['PRVT', { cik: '0001944285', seriesId: 'S000PRVT', classId: 'C0002' }],
+    ]);
+    expect(resolveTemaNportSeriesRef('WELD', mapping)?.seriesId).toBe('S000WELD');
+    expect(resolveTemaNportSeriesRef('DICE', mapping)).toBeNull();
+    expect(nportSeriesMatchesFund({ regName: '', regCik: '', seriesName: 'DICE Trading & Prediction Markets ETF', seriesId: '', reportDate: '', holdings: [], netAssets: null }, 'DICE', 'Tema DICE Trading and Prediction Markets ETF')).toBe(true);
+    expect(nportSeriesMatchesFund({ regName: '', regCik: '', seriesName: 'CANC Cancer Immunotherapy ETF', seriesId: '', reportDate: '', holdings: [], netAssets: null }, 'DICE', 'Tema DICE Trading and Prediction Markets ETF')).toBe(false);
+  });
+
+  test('scans the trust submissions in recent-first paced batches, caches symbols and matches exact series ids', async () => {
+    const filings = [
+      { accession: '0001944285-26-000003', filingDate: '2026-07-29', reportDate: '2026-05-31', seriesId: 'S000OTHER', seriesName: 'Tema Legacy ETF' },
+      { accession: '0001944285-26-000002', filingDate: '2026-07-28', reportDate: '2026-05-31', seriesId: 'S000WELD', seriesName: 'Tema Weld Industries ETF' },
+      { accession: '0001944285-26-000001', filingDate: '2026-07-27', reportDate: '2026-05-31', seriesId: 'S000PRVT', seriesName: 'Tema Private Markets ETF' },
+    ];
+    const tickerTable = {
+      fields: ['symbol', 'cik', 'seriesId', 'classId'],
+      data: [
+        ['RSHO', '1944285', 'S000WELD', 'C0001'],
+        ['PRVT', '1944285', 'S000PRVT', 'C0002'],
+      ],
+    };
+    const submissions = {
+      cik: 1944285,
+      filings: { recent: {
+        form: filings.map(() => 'NPORT-P'),
+        accessionNumber: filings.map(filing => filing.accession),
+        filingDate: filings.map(filing => filing.filingDate),
+        reportDate: filings.map(filing => filing.reportDate),
+      } },
+    };
+    const archiveCalls: string[] = [];
+    const responseFor = (payload: unknown) => new Response(JSON.stringify(payload), { status: 200, headers: { 'content-type': 'application/json' } });
+    const fetchImpl: typeof fetch = async input => {
+      const url = String(input);
+      if (url === SEC_COMPANY_TICKERS_MF_URL) return responseFor(tickerTable);
+      if (url === SEC_SUBMISSIONS_URL) return responseFor(submissions);
+      const filing = filings.find(value => url.includes(value.accession.replace(/-/g, '')));
+      if (!filing) return new Response('missing fixture', { status: 404 });
+      archiveCalls.push(filing.accession);
+      const xml = `<edgarSubmission><genInfo><regName>Tema ETF Trust</regName><regCik>0001944285</regCik><seriesName>${filing.seriesName}</seriesName><seriesId>${filing.seriesId}</seriesId><repPdDate>2026-05-31</repPdDate></genInfo><fundInfo><netAssets>1000000</netAssets></fundInfo></edgarSubmission>`;
+      return new Response(xml, { status: 200, headers: { 'content-type': 'text/xml' } });
+    };
+    const client = createPacedHttpClient({ gate: { pace: async () => undefined }, retries: 0, userAgent: 'test', fetchImpl });
+    const resolve = createNportResolver(client, { concurrency: 2, maxDocuments: 10 });
+    const weld = await resolve({ ticker: 'WELD', name: 'Tema Weld Industries ETF' });
+    expect(weld?.report.seriesId).toBe('S000WELD');
+    expect(archiveCalls).toEqual([filings[0].accession, filings[1].accession]);
+    expect((await resolve({ ticker: 'WELD', name: 'Tema Weld Industries ETF' }))?.accession.accession).toBe(filings[1].accession);
+    const privateFund = await resolve({ ticker: 'PRVT', name: 'Tema Private Markets ETF' });
+    expect(privateFund?.report.seriesId).toBe('S000PRVT');
+    expect(archiveCalls).toEqual([filings[0].accession, filings[1].accession, filings[2].accession]);
   });
 });

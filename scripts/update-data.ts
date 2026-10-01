@@ -1404,3 +1404,135 @@ export async function responseJson(client: PacedHttpClient, input: string | URL,
     throw new Error(`Invalid JSON response from ${safeRequestPath(input)}`);
   }
 }
+
+export const SEC_COMPANY_TICKERS_MF_URL = 'https://www.sec.gov/files/company_tickers_mf.json';
+export const SEC_SUBMISSIONS_URL = `https://data.sec.gov/submissions/CIK${TEMA_ETF_TRUST_CIK}.json`;
+export type NportMatch = { accession: NportAccession; report: ParsedNport };
+export type NportResolver = (fund: Pick<TemaFund, 'ticker' | 'name'>) => Promise<NportMatch | null>;
+
+export function resolveTemaNportSeriesRef(ticker: string, seriesMap: Map<string, NportSeriesRef>): NportSeriesRef | null {
+  const normalized = ticker.trim().toUpperCase();
+  const candidates = normalized === 'WELD' ? ['WELD', 'RSHO'] : normalized === 'RSHO' ? ['RSHO', 'WELD'] : [normalized];
+  for (const candidate of candidates) {
+    const reference = seriesMap.get(candidate);
+    if (reference?.seriesId) return reference;
+  }
+  return null;
+}
+
+function comparableSeriesWords(value: string): string[] {
+  const ignored = new Set(['TEMA', 'ETF', 'FUND', 'TRUST', 'SERIES', 'STRATEGY', 'THE', 'AND', 'OF', 'AT', 'FOR']);
+  return [...new Set(value.toUpperCase().replace(/[^A-Z0-9]+/g, ' ').split(/\s+/).filter(word => word.length > 2 && !ignored.has(word)))];
+}
+
+export function nportSeriesMatchesFund(report: ParsedNport, ticker: string, fundName: string): boolean {
+  const seriesName = report.seriesName.trim();
+  if (!seriesName) return false;
+  const normalizedTicker = ticker.trim().toUpperCase();
+  if (normalizedTicker && new RegExp(`(?:^|[^A-Z0-9])${normalizedTicker}(?:$|[^A-Z0-9])`).test(seriesName.toUpperCase())) return true;
+  const desired = comparableSeriesWords(fundName);
+  const actual = new Set(comparableSeriesWords(seriesName));
+  if (!desired.length) return false;
+  const overlap = desired.filter(word => actual.has(word)).length;
+  return overlap >= 2 && overlap / desired.length >= 0.7;
+}
+
+/** SEC series Atom endpoints can be blocked; scan the trust's recent submissions instead. */
+export function createNportResolver(
+  client: PacedHttpClient,
+  options: { concurrency?: number; maxDocuments?: number; tickerMapUrl?: string; submissionsUrl?: string } = {},
+): NportResolver {
+  const concurrency = Math.max(1, Math.floor(options.concurrency ?? 2));
+  const maxDocuments = Math.min(500, Math.max(1, Math.floor(options.maxDocuments ?? 160)));
+  const tickerMapUrl = options.tickerMapUrl ?? SEC_COMPANY_TICKERS_MF_URL;
+  const submissionsUrl = options.submissionsUrl ?? SEC_SUBMISSIONS_URL;
+  let tickerMapPromise: Promise<Map<string, NportSeriesRef>> | null = null;
+  let accessionPromise: Promise<NportAccession[]> | null = null;
+  const reportBySeriesId = new Map<string, NportMatch>();
+  const scannedReports: NportMatch[] = [];
+  const resolvedByKey = new Map<string, Promise<NportMatch | null>>();
+  let scanIndex = 0;
+  let scanTail: Promise<void> = Promise.resolve();
+
+  const getTickerMap = (): Promise<Map<string, NportSeriesRef>> => {
+    if (!tickerMapPromise) {
+      tickerMapPromise = responseJson(client, tickerMapUrl)
+        .then(payload => parseTemaFundTickerTable(payload))
+        .catch(error => {
+          outputNote(`SEC ticker table unavailable; N-PORT name matching will be used: ${error instanceof Error ? error.message : 'request failed'}`);
+          return new Map<string, NportSeriesRef>();
+        });
+    }
+    return tickerMapPromise;
+  };
+  const getAccessions = (): Promise<NportAccession[]> => {
+    if (!accessionPromise) {
+      accessionPromise = responseJson(client, submissionsUrl)
+        .then(parseNportAccessions)
+        .catch(error => {
+          outputNote(`SEC trust submissions unavailable: ${error instanceof Error ? error.message : 'request failed'}`);
+          return [];
+        });
+    }
+    return accessionPromise;
+  };
+
+  async function readFiling(accession: NportAccession): Promise<NportMatch | null> {
+    try {
+      const xml = await responseText(client, accession.url);
+      const report = parseNport(xml);
+      if (!report.seriesId) return null;
+      return { accession, report };
+    } catch (error) {
+      outputNote(`SEC N-PORT ${accession.accession} unavailable: ${error instanceof Error ? error.message : 'request failed'}`);
+      return null;
+    }
+  }
+
+  async function scanFor(fund: Pick<TemaFund, 'ticker' | 'name'>, reference: NportSeriesRef | null): Promise<NportMatch | null> {
+    const seriesId = reference?.seriesId.toUpperCase() ?? '';
+    const matches = (entry: NportMatch): boolean => seriesId
+      ? entry.report.seriesId.toUpperCase() === seriesId
+      : nportSeriesMatchesFund(entry.report, fund.ticker, fund.name);
+    const cached = seriesId ? reportBySeriesId.get(seriesId) : scannedReports.find(matches);
+    if (cached) return cached;
+    const operation = scanTail.then(async () => {
+      const previousMatch = seriesId ? reportBySeriesId.get(seriesId) : scannedReports.find(matches);
+      if (previousMatch) return previousMatch;
+      const accessions = await getAccessions();
+      const limit = Math.min(accessions.length, maxDocuments);
+      while (scanIndex < limit) {
+        const batch = accessions.slice(scanIndex, scanIndex + concurrency);
+        scanIndex += batch.length;
+        const reports = await Promise.all(batch.map(readFiling));
+        for (const entry of reports) {
+          if (!entry) continue;
+          if (!reportBySeriesId.has(entry.report.seriesId.toUpperCase())) reportBySeriesId.set(entry.report.seriesId.toUpperCase(), entry);
+          scannedReports.push(entry);
+        }
+        const found = reports.find((entry): entry is NportMatch => Boolean(entry && matches(entry)));
+        if (found) return found;
+      }
+      return seriesId ? reportBySeriesId.get(seriesId) ?? null : scannedReports.find(matches) ?? null;
+    });
+    scanTail = operation.then(() => undefined, () => undefined);
+    return operation;
+  }
+
+  return async fund => {
+    const seriesMap = await getTickerMap();
+    const reference = resolveTemaNportSeriesRef(fund.ticker, seriesMap);
+    const key = `${fund.ticker.toUpperCase()}|${reference?.seriesId ?? fund.name.toUpperCase()}`;
+    let promise = resolvedByKey.get(key);
+    if (!promise) {
+      promise = scanFor(fund, reference);
+      resolvedByKey.set(key, promise);
+    }
+    try {
+      return await promise;
+    } catch (error) {
+      resolvedByKey.delete(key);
+      throw error;
+    }
+  };
+}
