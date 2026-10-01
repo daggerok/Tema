@@ -6,11 +6,13 @@ import {
   findTemaHoldingsCsvUrl,
   normalizeTemaDate,
   parseCsv,
+  parseTemaFundPage,
   parseTemaCatalog,
   parseTemaHoldingsCsv,
 } from './update-data.ts';
 
 const holdingsFixture = readFileSync(new URL('./fixtures/tema-holdings-2026-09-29.csv', import.meta.url), 'utf8');
+const fundPageFixture = readFileSync(new URL('./fixtures/tema-volt-page-2026-09-29.html', import.meta.url), 'utf8');
 
 describe('parseCsv', () => {
   test('supports CRLF, quoted commas, doubled quotes, embedded newlines and a UTF-8 BOM', () => {
@@ -35,11 +37,13 @@ describe('Tema fund catalog parsing', () => {
       <a href="https://temaetfs.com/volt">VOLT Electrification ETF</a>
       <a href="/dice">DICE</a>
       <a href="/dice">DICE (NEW) Trading &amp; Prediction Markets ETF</a>
+      <a href="/prvt">PRVT</a>
       <a href="/funds">ETF list</a>
       <a href="/education">ETF Education</a>
     `;
     expect(parseTemaCatalog(html)).toEqual([
       { ticker: 'DICE', name: 'DICE Trading & Prediction Markets ETF', fundPage: 'https://temaetfs.com/dice' },
+      { ticker: 'PRVT', name: 'PRVT', fundPage: 'https://temaetfs.com/prvt' },
       { ticker: 'VOLT', name: 'VOLT Electrification ETF', fundPage: 'https://temaetfs.com/volt' },
     ]);
   });
@@ -122,10 +126,40 @@ describe('Tema holdings CSV mapping', () => {
   });
 });
 
+describe('Tema fund-page metadata parsing', () => {
+  test('reads the official details/price blocks and maps source values without extra rows', () => {
+    expect(parseTemaFundPage(fundPageFixture, 'VOLT', 'VOLT Electrification ETF')).toEqual({
+      ticker: 'VOLT',
+      name: 'VOLT Electrification ETF',
+      cusip: '87975E834',
+      inceptionDate: 'Dec 03 2024',
+      ter: '0.75%',
+      terValue: 0.75,
+      aum: '$734,149,760',
+      aumValue: 734149760,
+      exchange: 'Nasdaq',
+      sharesOutstanding: 20500000,
+      holdingsCount: 27,
+      nav: '$35.81',
+      navValue: 35.81,
+      closePrice: '$35.85',
+      closePriceValue: 35.85,
+      premiumDiscount: '0.11%',
+      premiumDiscountValue: 0.11,
+      asOfDate: 'Sep 29 2026',
+    });
+  });
+
+  test('rejects a fund-page ticker that does not match the requested catalog ticker', () => {
+    expect(() => parseTemaFundPage(fundPageFixture, 'ARMY')).toThrow('fund page identifies itself as VOLT');
+  });
+});
+
 describe('Tema holdings date normalization', () => {
   test.each([
     ['2026-09-29', '2026-09-29'],
     ['09/29/2026', '2026-09-29'],
+    ['12/03/24', '2024-12-03'],
     ['09292026', '2026-09-29'],
     ['2026-02-30', ''],
     ['', ''],

@@ -75,7 +75,7 @@ export function parseTemaCatalog(html: string, baseUrl = 'https://temaetfs.com/f
     const ticker = parts[0].toUpperCase();
     let label = htmlText(match[0].slice(tag.length, match[0].lastIndexOf('<')));
     label = label.replace(/\s*\(NEW\)\s*/gi, ' ').replace(/\s+/g, ' ').trim();
-    if (!new RegExp(`^${ticker}(?:\\b|\\s)`, 'i').test(label) || !/\bETF\b/i.test(label)) continue;
+    if (!new RegExp(`^${ticker}(?:\\b|\\s|$)`, 'i').test(label)) continue;
     const current = found.get(ticker);
     if (!current || label.length > current.name.length) {
       found.set(ticker, { ticker, name: label, fundPage: url.href.replace(/\/$/, '') });
@@ -156,7 +156,7 @@ export function normalizeTemaDate(value: string): string {
   const text = value.trim();
   if (!text) return '';
   const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(text);
-  const us = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(text);
+  const us = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(text);
   const compact = /^(\d{2})(\d{2})(\d{4})$/.exec(text);
   let year: number;
   let month: number;
@@ -168,7 +168,8 @@ export function normalizeTemaDate(value: string): string {
   } else if (us) {
     month = Number(us[1]);
     day = Number(us[2]);
-    year = Number(us[3]);
+    const parsedYear = Number(us[3]);
+    year = us[3].length === 2 ? (parsedYear < 70 ? 2000 + parsedYear : 1900 + parsedYear) : parsedYear;
   } else if (compact) {
     month = Number(compact[1]);
     day = Number(compact[2]);
@@ -183,6 +184,86 @@ export function normalizeTemaDate(value: string): string {
   const check = new Date(Date.UTC(year, month - 1, day));
   if (check.getUTCFullYear() !== year || check.getUTCMonth() + 1 !== month || check.getUTCDate() !== day) return '';
   return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+export type ParsedTemaFundPage = {
+  ticker: string;
+  name: string;
+  cusip: string;
+  inceptionDate: string;
+  ter: string;
+  terValue: number | null;
+  aum: string;
+  aumValue: number | null;
+  exchange: string;
+  sharesOutstanding: number | null;
+  holdingsCount: number | null;
+  nav: string;
+  navValue: number | null;
+  closePrice: string;
+  closePriceValue: number | null;
+  premiumDiscount: string;
+  premiumDiscountValue: number | null;
+  asOfDate: string;
+};
+
+function formatDateLabel(isoDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!match) return '';
+  const [, year, month, day] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  return `${date.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' })} ${day} ${year}`;
+}
+
+/** Parse the public, server-rendered fund-detail boxes and daily price block. */
+export function parseTemaFundPage(html: string, requestedTicker: string, catalogName = ''): ParsedTemaFundPage {
+  const fields = new Map<string, string>();
+  const pairPattern = /<div\b[^>]*class=["'][^"']*\bcol-specification\b[^"']*["'][^>]*>([\s\S]*?)<\/div>\s*<div\b[^>]*class=["'][^"']*\bcol-details\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi;
+  for (const match of html.matchAll(pairPattern)) fields.set(htmlText(match[1]).toLowerCase(), htmlText(match[2]));
+
+  const ticker = (fields.get('ticker') ?? '').toUpperCase();
+  const expectedTicker = requestedTicker.trim().toUpperCase();
+  if (!ticker) throw new Error(`${expectedTicker}: fund page has no Ticker field`);
+  if (ticker !== expectedTicker) throw new Error(`${expectedTicker}: fund page identifies itself as ${ticker}`);
+
+  const priceFields = new Map<string, string>();
+  const pricePattern = /<div\b[^>]*class=["'][^"']*\bprice-table__row\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi;
+  for (const row of html.matchAll(pricePattern)) {
+    const cells = [...row[1].matchAll(/<span\b[^>]*>([\s\S]*?)<\/span>/gi)].map(cell => htmlText(cell[1]));
+    if (cells.length >= 2) priceFields.set(cells[0].toLowerCase(), cells[1]);
+  }
+  const asOfMatch = /<div\b[^>]*class=["'][^"']*\bas-of-date-container\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i.exec(html);
+  const asOfText = htmlText(asOfMatch?.[1] ?? '').replace(/^as of\s+/i, '');
+  const asOfDate = formatDateLabel(normalizeTemaDate(asOfText));
+  const h1Match = /<h1\b[^>]*>([\s\S]*?)<\/h1\s*>/i.exec(html);
+  const heading = htmlText(h1Match?.[1] ?? '').replace(new RegExp(`^${expectedTicker}\\s+`, 'i'), '').trim();
+  const ter = fields.get('total expense ratio') ?? '';
+  const aum = fields.get('aum') ?? '';
+  const nav = priceFields.get('nav') ?? '';
+  const closePrice = priceFields.get('market price') ?? '';
+  const premiumDiscount = priceFields.get('premium/discount') ?? '';
+  const inceptionIso = normalizeTemaDate(fields.get('inception date') ?? '');
+
+  return {
+    ticker,
+    name: catalogName || heading,
+    cusip: fields.get('cusip') ?? '',
+    inceptionDate: formatDateLabel(inceptionIso),
+    ter,
+    terValue: numericCell(ter),
+    aum,
+    aumValue: numericCell(aum),
+    exchange: fields.get('primary exchange') ?? '',
+    sharesOutstanding: numericCell(fields.get('shares outstanding') ?? ''),
+    holdingsCount: numericCell(fields.get('# of holdings') ?? ''),
+    nav,
+    navValue: numericCell(nav),
+    closePrice,
+    closePriceValue: numericCell(closePrice),
+    premiumDiscount,
+    premiumDiscountValue: numericCell(premiumDiscount),
+    asOfDate,
+  };
 }
 
 function numericCell(value: string): number | null {
