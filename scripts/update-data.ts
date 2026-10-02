@@ -473,6 +473,42 @@ export function readUpdaterConfig(env: Record<string, string | undefined> = proc
   };
 }
 
+// --- TLS trust store (identical in every ETF repo) ---
+const SYSTEM_CA_MARKER = 'ETF_UPDATER_SYSTEM_CA';
+const CERT_ERROR = /UNABLE_TO_GET_ISSUER_CERT|UNABLE_TO_VERIFY_LEAF_SIGNATURE|SELF_SIGNED_CERT|CERT_HAS_EXPIRED|unable to get (?:local )?issuer certificate|self[- ]signed certificate|certificate has expired/i;
+
+export function isCertError(error: unknown): boolean {
+  const e = error as { code?: unknown; message?: unknown; cause?: unknown } | null;
+  return CERT_ERROR.test(`${String(e?.code ?? '')} ${String(e?.message ?? '')}`) || (e?.cause ? isCertError(e.cause) : false);
+}
+
+export function systemCaActive(env: Record<string, string | undefined> = process.env, execArgv: string[] = process.execArgv): boolean {
+  return execArgv.includes('--use-system-ca') || env.NODE_USE_SYSTEM_CA === '1' || env[SYSTEM_CA_MARKER] === '1';
+}
+
+export function reexecWithSystemCa(): never {
+  const child = Bun.spawnSync([process.execPath, '--use-system-ca', ...process.argv.slice(1)], {
+    env: { ...process.env, [SYSTEM_CA_MARKER]: '1' },
+    stdio: ['inherit', 'inherit', 'inherit'],
+  });
+  process.exit(child.exitCode ?? 1);
+}
+
+/** mode: auto (restart once on an untrusted-certificate error), true (restart now), false (never). */
+export function installSystemCa(mode: string, reexec: () => never = reexecWithSystemCa, active: boolean = systemCaActive()): void {
+  if (mode === 'false' || active) return;
+  if (mode === 'true') reexec();
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (...args: Parameters<typeof fetch>) => {
+    try { return await realFetch(...args); }
+    catch (error) {
+      if (!isCertError(error)) throw error;
+      console.error('[ notice   ] TLS certificate not trusted; restarting once with --use-system-ca');
+      return reexec();
+    }
+  }) as typeof fetch;
+}
+
 // File defaults and explicit overrides, same mechanism as the sibling updaters:
 // allowlisted scalar controls only, so GitHub Actions can resolve them without
 // interpolating user input into bash. Precedence: config file < advanced JSON <
@@ -482,7 +518,7 @@ export const CONTROL_NAMES = [
   'AUM', 'TER', 'DIVIDEND_YIELD', 'SEC_YIELD',
   ...['PERFORMANCE', 'TOTAL_RETURN'].flatMap(prefix => RETURN_PERIODS.map(period => `${prefix}_${period}`)),
   'HOLDINGS_PAGE_SIZE', 'HISTORY_PAGE_SIZE', 'HISTORY_RANGE', 'OUTPUT_DIR',
-  'EDGAR_FALLBACK', 'SKIP_YAHOO', 'SEC_UA', 'VERBOSE',
+  'EDGAR_FALLBACK', 'SKIP_YAHOO', 'SEC_UA', 'VERBOSE', 'USE_SYSTEM_CA',
 ] as const;
 export type ControlName = (typeof CONTROL_NAMES)[number];
 export const CONFIG_FILE_URL = new URL('./update-data.config.json', import.meta.url);
@@ -515,6 +551,11 @@ export function resolveControls(
     if (value !== undefined) apply({ [key]: value });
   }
   if (result.VERBOSE && !/^(0|1|true|false|yes|no|on|off)$/i.test(result.VERBOSE.trim())) throw new Error(`VERBOSE: expected boolean, got ${result.VERBOSE}`);
+  if (result.USE_SYSTEM_CA !== undefined) {
+    const mode = result.USE_SYSTEM_CA.trim().toLowerCase();
+    if (!['auto', 'true', 'false'].includes(mode)) throw new Error(`USE_SYSTEM_CA: expected auto, true or false, got ${result.USE_SYSTEM_CA}`);
+    result.USE_SYSTEM_CA = mode;
+  }
   readUpdaterConfig(result); // validate every integer, boolean, range and filter before any request or write
   return result;
 }
@@ -1379,7 +1420,7 @@ export function retryDelayMilliseconds(retryAfter: string | null, attempt: numbe
 /** Fetch wrapper with per-provider pacing, bounded retries, and no request-header logging. */
 export function createPacedHttpClient(options: HttpClientOptions): PacedHttpClient {
   if (!Number.isSafeInteger(options.retries) || options.retries < 0) throw new Error(`retries must be a non-negative integer, got ${options.retries}`);
-  const fetchImpl = options.fetchImpl ?? fetch;
+  const fetchImpl = options.fetchImpl ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
   const sleep = options.sleep ?? (milliseconds => new Promise(resolveSleep => setTimeout(resolveSleep, milliseconds)));
   const now = options.now ?? Date.now;
   return {
@@ -1887,6 +1928,7 @@ Controls:
   SKIP_YAHOO=false              retain prior history instead of requesting Yahoo when true
   SEC_UA="daggerok ETF feed daggerok@gmail.com" SEC User-Agent with a contact address (redacted in logs)
   VERBOSE=false                 show per-request/per-fund retry and fallback notices
+  USE_SYSTEM_CA=auto            auto|true|false: restart once with Bun's --use-system-ca on an untrusted-certificate error (auto), always (true) or never (false)
 
 A full run always ignores and clears the saved MAX_FETCHES cursor. TICKERS filters
 which funds are processed; CATEGORY and data-dependent bounds are applied before
@@ -2306,6 +2348,7 @@ export async function main(args: string[] = process.argv.slice(2)): Promise<void
     return;
   }
   const controls = await runtimeControls();
+  installSystemCa(controls.USE_SYSTEM_CA ?? 'auto');
   if (controls.VERBOSE !== undefined) process.env.VERBOSE = controls.VERBOSE;
   await runUpdater(readUpdaterConfig(controls));
 }

@@ -4,9 +4,11 @@ import { readFileSync } from 'node:fs';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 import {
   CONTROL_NAMES,
+  installSystemCa,
+  isCertError,
   resolveControls,
   runtimeControls,
   buildPages,
@@ -845,7 +847,7 @@ describe('Tema CLI help and console contracts', () => {
 
   test('documents every supported environment control and performs no network work for help', () => {
     const help = updaterHelpText();
-    for (const item of ['MAX_FETCHES', 'REQUEST_SLEEP', 'CONCURRENCY', 'MAX_RETRIES', 'TICKERS', 'CATEGORY', 'AUM', 'TER', 'DIVIDEND_YIELD', 'SEC_YIELD', 'PERFORMANCE_', 'TOTAL_RETURN_', 'HOLDINGS_PAGE_SIZE', 'HISTORY_PAGE_SIZE', 'HISTORY_RANGE', 'OUTPUT_DIR', 'EDGAR_FALLBACK', 'SKIP_YAHOO', 'SEC_UA', 'VERBOSE']) expect(help).toContain(item);
+    for (const item of ['MAX_FETCHES', 'REQUEST_SLEEP', 'CONCURRENCY', 'MAX_RETRIES', 'TICKERS', 'CATEGORY', 'AUM', 'TER', 'DIVIDEND_YIELD', 'SEC_YIELD', 'PERFORMANCE_', 'TOTAL_RETURN_', 'HOLDINGS_PAGE_SIZE', 'HISTORY_PAGE_SIZE', 'HISTORY_RANGE', 'OUTPUT_DIR', 'EDGAR_FALLBACK', 'SKIP_YAHOO', 'SEC_UA', 'VERBOSE', 'USE_SYSTEM_CA']) expect(help).toContain(item);
     const log = console.log;
     const lines: string[] = [];
     console.log = (...values: unknown[]) => { lines.push(values.map(String).join(' ')); };
@@ -1021,7 +1023,7 @@ describe('control resolver', () => {
   });
 
   test('rejects unknown keys, non-scalars, newlines and invalid values', () => {
-    for (const value of [{ UNKNOWN: 1 }, { SEC_UA: 'x\nEVIL=yes' }, { CONCURRENCY: 0 }, { MAX_RETRIES: 0 }, { MAX_RETRIES: -1 }, { MAX_FETCHES: 1.5 }, { REQUEST_SLEEP: '-1' }, { VERBOSE: 'maybe' }, { SKIP_YAHOO: 'maybe' }, { AUM: '1:2:3' }, { TER: '2:1' }, { HISTORY_RANGE: '10d' }, { TICKERS: ['VOLT'] }, null, []]) {
+    for (const value of [{ UNKNOWN: 1 }, { SEC_UA: 'x\nEVIL=yes' }, { CONCURRENCY: 0 }, { MAX_RETRIES: 0 }, { MAX_RETRIES: -1 }, { MAX_FETCHES: 1.5 }, { REQUEST_SLEEP: '-1' }, { VERBOSE: 'maybe' }, { USE_SYSTEM_CA: 'maybe' }, { SKIP_YAHOO: 'maybe' }, { AUM: '1:2:3' }, { TER: '2:1' }, { HISTORY_RANGE: '10d' }, { TICKERS: ['VOLT'] }, null, []]) {
       expect(() => resolveControls(value)).toThrow();
     }
     expect(() => resolveControls({}, { SEC_UA: 'x\rfoo' })).toThrow();
@@ -1099,5 +1101,58 @@ describe('README and workflow shape', () => {
     expect(wf).toContain('timeout-minutes: 30');
     expect(wf).toContain('persist-credentials: false');
     expect(wf).not.toMatch(/^\s{2}push:/m);
+  });
+});
+
+describe('system CA support', () => {
+  const originalFetch = globalThis.fetch;
+  afterEach(() => { globalThis.fetch = originalFetch; });
+  const never = (): never => { throw new Error('reexec'); };
+
+  test('USE_SYSTEM_CA resolves case-insensitively and defaults to auto', () => {
+    expect(resolveControls(configFile).USE_SYSTEM_CA).toBe('auto');
+    for (const mode of ['auto', 'true', 'false', 'TRUE', 'Auto']) expect(resolveControls({}, { USE_SYSTEM_CA: mode }).USE_SYSTEM_CA).toBe(mode.toLowerCase());
+    expect(() => resolveControls({}, { USE_SYSTEM_CA: 'maybe' })).toThrow();
+  });
+
+  test('isCertError detects untrusted-certificate errors, also through cause', () => {
+    expect(isCertError({ code: 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY' })).toBe(true);
+    expect(isCertError(new Error('unable to get local issuer certificate'))).toBe(true);
+    expect(isCertError(new Error('fetch failed', { cause: new Error('self-signed certificate in certificate chain') }))).toBe(true);
+    expect(isCertError({ code: 'ECONNRESET' })).toBe(false);
+    expect(isCertError(new Error('HTTP 403 Forbidden'))).toBe(false);
+  });
+
+  test('installSystemCa false or active leaves fetch unchanged', () => {
+    installSystemCa('false', never, false);
+    expect(globalThis.fetch).toBe(originalFetch);
+    installSystemCa('auto', never, true);
+    installSystemCa('true', never, true);
+    expect(globalThis.fetch).toBe(originalFetch);
+  });
+
+  test('installSystemCa true re-executes immediately', () => {
+    let calls = 0;
+    installSystemCa('true', (() => { calls += 1; return undefined as never; }), false);
+    expect(calls).toBe(1);
+  });
+
+  test('installSystemCa auto wraps fetch', async () => {
+    let calls = 0;
+    const reexec = (() => { calls += 1; return undefined as never; });
+    globalThis.fetch = (async () => { throw new Error('unable to get local issuer certificate'); }) as unknown as typeof fetch;
+    installSystemCa('auto', reexec, false);
+    await globalThis.fetch('https://example.invalid');
+    expect(calls).toBe(1);
+
+    globalThis.fetch = (async () => { throw new Error('ECONNRESET'); }) as unknown as typeof fetch;
+    installSystemCa('auto', reexec, false);
+    await expect(globalThis.fetch('https://example.invalid')).rejects.toThrow('ECONNRESET');
+    expect(calls).toBe(1);
+
+    globalThis.fetch = (async () => new Response('ok')) as unknown as typeof fetch;
+    installSystemCa('auto', reexec, false);
+    expect(await (await globalThis.fetch('https://example.invalid')).text()).toBe('ok');
+    expect(calls).toBe(1);
   });
 });
