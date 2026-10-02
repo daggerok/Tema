@@ -10,7 +10,7 @@ bunx serve . -p 1234
 open http://0:1234
 ```
 
-The expected GitHub Pages URL is <https://daggerok.github.io/Tema/>; deployment is pending.
+The published application is available at <https://daggerok.github.io/Tema/>.
 
 ## Updating the static Tema ETFs data
 
