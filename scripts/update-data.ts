@@ -454,11 +454,11 @@ export function readUpdaterConfig(env: Record<string, string | undefined> = proc
     maxFetches: parsePositiveInt(envValue(env, 'MAX_FETCHES', ['TEMA_LIMIT']), 0, true),
     requestSleepSeconds: parseDecimal(envValue(env, 'REQUEST_SLEEP'), 1),
     concurrency: parsePositiveInt(envValue(env, 'CONCURRENCY'), 2),
-    maxRetries: parsePositiveInt(envValue(env, 'MAX_RETRIES'), 2, true),
+    maxRetries: parsePositiveInt(envValue(env, 'MAX_RETRIES'), 2),
     holdingsPageSize: parsePositiveInt(envValue(env, 'HOLDINGS_PAGE_SIZE'), 250),
     historyPageSize: parsePositiveInt(envValue(env, 'HISTORY_PAGE_SIZE'), 1000),
     historyRange: parseHistoryRange(envValue(env, 'HISTORY_RANGE')),
-    secUserAgent: envValue(env, 'SEC_UA') ?? 'Tema ETF updater research@example.com',
+    secUserAgent: envValue(env, 'SEC_UA') ?? 'daggerok ETF feed daggerok@gmail.com',
     outputDir,
     tickers: parseList(envValue(env, 'TICKERS')).map(value => value.toUpperCase()),
     categories: parseCategoryList(envValue(env, 'CATEGORY', ['ASSET_CLASS'])),
@@ -471,6 +471,57 @@ export function readUpdaterConfig(env: Record<string, string | undefined> = proc
     edgarFallback: parseFlag(envValue(env, 'EDGAR_FALLBACK'), true),
     skipYahoo: parseFlag(envValue(env, 'SKIP_YAHOO'), false),
   };
+}
+
+// File defaults and explicit overrides, same mechanism as the sibling updaters:
+// allowlisted scalar controls only, so GitHub Actions can resolve them without
+// interpolating user input into bash. Precedence: config file < advanced JSON <
+// nonblank inputs < environment (the older TEMA_LIMIT / ASSET_CLASS names remain aliases).
+export const CONTROL_NAMES = [
+  'MAX_FETCHES', 'REQUEST_SLEEP', 'CONCURRENCY', 'MAX_RETRIES', 'TICKERS', 'CATEGORY',
+  'AUM', 'TER', 'DIVIDEND_YIELD', 'SEC_YIELD',
+  ...['PERFORMANCE', 'TOTAL_RETURN'].flatMap(prefix => RETURN_PERIODS.map(period => `${prefix}_${period}`)),
+  'HOLDINGS_PAGE_SIZE', 'HISTORY_PAGE_SIZE', 'HISTORY_RANGE', 'OUTPUT_DIR',
+  'EDGAR_FALLBACK', 'SKIP_YAHOO', 'SEC_UA', 'VERBOSE',
+] as const;
+export type ControlName = (typeof CONTROL_NAMES)[number];
+export const CONFIG_FILE_URL = new URL('./update-data.config.json', import.meta.url);
+const CONTROL_ALIASES: Record<string, string[]> = { MAX_FETCHES: ['TEMA_LIMIT'], CATEGORY: ['ASSET_CLASS'] };
+
+export function resolveControls(
+  file: unknown = {},
+  advanced: unknown = {},
+  inputs: unknown = {},
+  env: Record<string, string | undefined> = {},
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  const known = new Set<string>(CONTROL_NAMES);
+  const apply = (value: unknown, skipEmpty = false): void => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Configuration must be a JSON object');
+    for (const [key, raw] of Object.entries(value)) {
+      if (!known.has(key)) throw new Error(`Unknown updater control: ${key}`);
+      if (skipEmpty && (raw === '' || raw === undefined || raw === null)) continue;
+      if (!['string', 'number', 'boolean'].includes(typeof raw)) throw new Error(`${key}: expected string, number or boolean`);
+      const text = String(raw);
+      if (/[\r\n\0]/.test(text)) throw new Error(`${key}: multiline/control characters are not allowed`);
+      result[key] = text;
+    }
+  };
+  apply(file);
+  apply(advanced);
+  apply(inputs, true);
+  for (const key of CONTROL_NAMES) {
+    const value = env[key] ?? (CONTROL_ALIASES[key] ?? []).map(alias => env[alias]).find(item => item !== undefined);
+    if (value !== undefined) apply({ [key]: value });
+  }
+  if (result.VERBOSE && !/^(0|1|true|false|yes|no|on|off)$/i.test(result.VERBOSE.trim())) throw new Error(`VERBOSE: expected boolean, got ${result.VERBOSE}`);
+  readUpdaterConfig(result); // validate every integer, boolean, range and filter before any request or write
+  return result;
+}
+
+export async function runtimeControls(env: Record<string, string | undefined> = process.env): Promise<Record<string, string>> {
+  const file: unknown = JSON.parse(await readFile(CONFIG_FILE_URL, 'utf8'));
+  return resolveControls(file, {}, {}, env);
 }
 
 function rangeActive(range: NumericRange): boolean {
@@ -560,7 +611,7 @@ function outputNote(message: string): void {
 
 function outputPrintConfig(brand: string, config: UpdaterConfig): void {
   const entries = [...outputConfigEntries(config), ['VERBOSE', String(outputVerbose())] as [string, string]];
-  console.log(`[ config   ] ${brand} updater:\n${entries.map(([key, value]) => `              ${key}=${/TOKEN|PASSWORD|SECRET|COOKIE/i.test(key) ? '<redacted>' : outputClean(value)}`).join('\n')}`);
+  console.log(`[ config   ] ${brand} updater:\n${entries.map(([key, value]) => `              ${key}=${/TOKEN|PASSWORD|SECRET|COOKIE|SEC_UA/i.test(key) ? '<redacted>' : outputClean(value)}`).join('\n')}`);
 }
 
 function outputPrintFilter(selected: number, total: number, deferred = false): void {
@@ -1801,7 +1852,7 @@ export function hasDataDependentFilters(config: UpdaterConfig): boolean {
 
 export function outputPrintConfig(brand: string, config: UpdaterConfig): void {
   const entries: Array<[string, string]> = [...outputConfigEntries(config), ['VERBOSE', String(outputVerbose())]];
-  console.log(`[ config   ] ${brand} updater:\n${entries.map(([key, value]) => `              ${key}=${/TOKEN|PASSWORD|SECRET|COOKIE/i.test(key) ? '<redacted>' : outputClean(value)}`).join('\n')}`);
+  console.log(`[ config   ] ${brand} updater:\n${entries.map(([key, value]) => `              ${key}=${/TOKEN|PASSWORD|SECRET|COOKIE|SEC_UA/i.test(key) ? '<redacted>' : outputClean(value)}`).join('\n')}`);
 }
 
 export function outputPrintFilter(selected: number, total: number, deferred = false): void {
@@ -1812,11 +1863,14 @@ export function updaterHelpText(): string {
   return `Tema ETFs static data updater
 Usage: bun scripts/update-data.ts [--help|-h]
 
-Environment controls (all optional):
+Defaults come from scripts/update-data.config.json; environment variables override
+them (the older TEMA_LIMIT and ASSET_CLASS names remain aliases of MAX_FETCHES and CATEGORY).
+
+Controls:
   MAX_FETCHES=0                 0 runs the full catalog; a positive value limits a resumable batch
   REQUEST_SLEEP=1               minimum seconds between requests per provider lane
   CONCURRENCY=2                 independently paced worker lanes per provider
-  MAX_RETRIES=2                 retries for network/408/425/429/5xx errors
+  MAX_RETRIES=2                 retries for network/408/425/429/5xx errors (integer >= 1)
   TICKERS="VOLT ARMY DSPY"      comma/space/semicolon-separated fund allowlist
   CATEGORY=equity               comma/semicolon-separated category allowlist (Tema default: Equity)
   AUM=MIN:MAX                   USD bounds or nano/micro/small/mid/large presets
@@ -1831,7 +1885,7 @@ Environment controls (all optional):
   OUTPUT_DIR=api/tema           static API output directory
   EDGAR_FALLBACK=true           use SEC N-PORT-P for holdings when Tema CSV/page data is unavailable
   SKIP_YAHOO=false              retain prior history instead of requesting Yahoo when true
-  SEC_UA="Company contact@example.org" descriptive SEC User-Agent; set a real contact address when deploying
+  SEC_UA="daggerok ETF feed daggerok@gmail.com" SEC User-Agent with a contact address (redacted in logs)
   VERBOSE=false                 show per-request/per-fund retry and fallback notices
 
 A full run always ignores and clears the saved MAX_FETCHES cursor. TICKERS filters
@@ -2251,7 +2305,9 @@ export async function main(args: string[] = process.argv.slice(2)): Promise<void
     printHelp();
     return;
   }
-  await runUpdater(readUpdaterConfig());
+  const controls = await runtimeControls();
+  if (controls.VERBOSE !== undefined) process.env.VERBOSE = controls.VERBOSE;
+  await runUpdater(readUpdaterConfig(controls));
 }
 
 if (import.meta.main) {

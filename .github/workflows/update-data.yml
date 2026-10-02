@@ -1,212 +1,196 @@
 name: Update Tema ETFs data
 
 on:
-  # Weekly refresh (every Sunday at 00:00 UTC) plus manual runs.
   schedule:
     - cron: '0 0 * * 0'
   workflow_dispatch:
     inputs:
       max_fetches:
-        description: "Batch size; 0 refreshes the full catalog"
+        description: "Batch size; 0 refreshes the full catalog; blank inherits scripts/update-data.config.json"
         required: false
-        default: "0"
+        default: ""
         type: string
       request_sleep:
-        description: "Minimum seconds between request starts per provider lane"
+        description: "Minimum seconds between request starts per provider lane; blank inherits scripts/update-data.config.json"
         required: false
-        default: "1"
+        default: ""
         type: string
       concurrency:
-        description: "Independently paced worker lanes per provider"
+        description: "Independently paced worker lanes per provider; blank inherits scripts/update-data.config.json"
         required: false
-        default: "2"
+        default: ""
         type: string
       max_retries:
-        description: "Retries for network, 408, 425, 429, and 5xx errors"
+        description: "Retries for network, 408, 425, 429, and 5xx errors; blank inherits scripts/update-data.config.json"
         required: false
-        default: "2"
+        default: ""
         type: string
       tickers:
-        description: "Only update these tickers, separated by spaces, commas, or semicolons"
+        description: "Only update these tickers, separated by spaces, commas, or semicolons; blank inherits scripts/update-data.config.json"
         required: false
         default: ""
         type: string
       category:
-        description: "Comma- or semicolon-separated category allowlist"
+        description: "Comma- or semicolon-separated category allowlist; blank inherits scripts/update-data.config.json"
         required: false
         default: ""
         type: string
       aum:
-        description: "AUM min:max; USD values with K/M/B/T suffixes or nano/micro/small/mid/large"
+        description: "AUM min:max; USD values with K/M/B/T suffixes or nano/micro/small/mid/large; blank inherits scripts/update-data.config.json"
         required: false
-        default: ":"
+        default: ""
         type: string
       ter:
-        description: "Total expense ratio range in percent, min:max"
+        description: "Total expense ratio range in percent, min:max; blank inherits scripts/update-data.config.json"
         required: false
-        default: ":"
+        default: ""
         type: string
       dividend_yield:
-        description: "Trailing-12-month distribution-yield range in percent"
+        description: "Trailing-12-month distribution-yield range in percent; blank inherits scripts/update-data.config.json"
         required: false
-        default: ":"
-        type: string
-      sec_yield:
-        description: "SEC-yield range in percent; unavailable values do not match an active bound"
-        required: false
-        default: ":"
-        type: string
-      performance_ytd:
-        description: "YTD performance range, min:max"
-        required: false
-        default: ":"
-        type: string
-      performance_1y:
-        description: "1-year performance range, min:max"
-        required: false
-        default: ":"
-        type: string
-      performance_3y:
-        description: "3-year annualized performance range, min:max"
-        required: false
-        default: ":"
-        type: string
-      performance_5y:
-        description: "5-year annualized performance range, min:max"
-        required: false
-        default: ":"
-        type: string
-      performance_10y:
-        description: "10-year annualized performance range, min:max"
-        required: false
-        default: ":"
-        type: string
-      total_return_ytd:
-        description: "Cumulative YTD total-return range, min:max"
-        required: false
-        default: ":"
-        type: string
-      total_return_1y:
-        description: "Cumulative 1-year total-return range, min:max"
-        required: false
-        default: ":"
-        type: string
-      total_return_3y:
-        description: "Cumulative 3-year total-return range, min:max"
-        required: false
-        default: ":"
-        type: string
-      total_return_5y:
-        description: "Cumulative 5-year total-return range, min:max"
-        required: false
-        default: ":"
-        type: string
-      total_return_10y:
-        description: "Cumulative 10-year total-return range, min:max"
-        required: false
-        default: ":"
+        default: ""
         type: string
       holdings_page_size:
-        description: "Rows in each generated current-holdings JSON page"
+        description: "Rows in each generated current-holdings JSON page; blank inherits scripts/update-data.config.json"
         required: false
-        default: "250"
+        default: ""
         type: string
       history_page_size:
-        description: "Rows in each generated history JSON page"
+        description: "Rows in each generated history JSON page; blank inherits scripts/update-data.config.json"
         required: false
-        default: "1000"
+        default: ""
         type: string
       history_range:
-        description: "Yahoo history window: max or a number of years such as 10y"
+        description: "Yahoo history window: max or a number of years such as 10y; blank inherits scripts/update-data.config.json"
         required: false
-        default: max
+        default: ""
         type: string
       edgar_fallback:
-        description: "Use SEC N-PORT-P as holdings fallback when Tema holdings are unavailable"
+        description: "Use SEC N-PORT-P as holdings fallback when Tema holdings are unavailable (true or false); blank inherits scripts/update-data.config.json"
         required: false
-        default: true
-        type: boolean
+        default: ""
+        type: string
       skip_yahoo:
-        description: "Skip Yahoo Finance history and retain previously published history"
+        description: "Skip Yahoo Finance history and retain previously published history (true or false); blank inherits scripts/update-data.config.json"
         required: false
-        default: false
-        type: boolean
+        default: ""
+        type: string
+      performance_ytd:
+        description: "YTD performance range, min:max; blank inherits scripts/update-data.config.json"
+        required: false
+        default: ""
+        type: string
+      performance_1y:
+        description: "1-year performance range, min:max; blank inherits scripts/update-data.config.json"
+        required: false
+        default: ""
+        type: string
+      performance_3y:
+        description: "3-year performance range, min:max; blank inherits scripts/update-data.config.json"
+        required: false
+        default: ""
+        type: string
+      performance_5y:
+        description: "5-year performance range, min:max; blank inherits scripts/update-data.config.json"
+        required: false
+        default: ""
+        type: string
+      performance_10y:
+        description: "10-year performance range, min:max; blank inherits scripts/update-data.config.json"
+        required: false
+        default: ""
+        type: string
+      total_return_ytd:
+        description: "YTD cumulative total-return range, min:max; blank inherits scripts/update-data.config.json"
+        required: false
+        default: ""
+        type: string
+      total_return_1y:
+        description: "1-year cumulative total-return range, min:max; blank inherits scripts/update-data.config.json"
+        required: false
+        default: ""
+        type: string
+      total_return_3y:
+        description: "3-year cumulative total-return range, min:max; blank inherits scripts/update-data.config.json"
+        required: false
+        default: ""
+        type: string
+      total_return_5y:
+        description: "5-year cumulative total-return range, min:max; blank inherits scripts/update-data.config.json"
+        required: false
+        default: ""
+        type: string
+      total_return_10y:
+        description: "10-year cumulative total-return range, min:max; blank inherits scripts/update-data.config.json"
+        required: false
+        default: ""
+        type: string
+      advanced:
+        description: 'JSON object of supported control overrides not exposed above (keys are UPPER_CASE control names, values are scalars); nonblank individual inputs win'
+        required: false
+        default: '{}'
+        type: string
 
 permissions:
   contents: write
 
 concurrency:
-  group: tema-etf-data
+  group: update-data
   cancel-in-progress: false
 
 jobs:
   update-data:
     runs-on: ubuntu-latest
-    env:
-      MAX_FETCHES: ${{ inputs.max_fetches }}
-      REQUEST_SLEEP: ${{ inputs.request_sleep }}
-      CONCURRENCY: ${{ inputs.concurrency }}
-      MAX_RETRIES: ${{ inputs.max_retries }}
-      TICKERS: ${{ inputs.tickers }}
-      CATEGORY: ${{ inputs.category }}
-      AUM: ${{ inputs.aum }}
-      TER: ${{ inputs.ter }}
-      DIVIDEND_YIELD: ${{ inputs.dividend_yield }}
-      SEC_YIELD: ${{ inputs.sec_yield }}
-      PERFORMANCE_YTD: ${{ inputs.performance_ytd }}
-      PERFORMANCE_1Y: ${{ inputs.performance_1y }}
-      PERFORMANCE_3Y: ${{ inputs.performance_3y }}
-      PERFORMANCE_5Y: ${{ inputs.performance_5y }}
-      PERFORMANCE_10Y: ${{ inputs.performance_10y }}
-      TOTAL_RETURN_YTD: ${{ inputs.total_return_ytd }}
-      TOTAL_RETURN_1Y: ${{ inputs.total_return_1y }}
-      TOTAL_RETURN_3Y: ${{ inputs.total_return_3y }}
-      TOTAL_RETURN_5Y: ${{ inputs.total_return_5y }}
-      TOTAL_RETURN_10Y: ${{ inputs.total_return_10y }}
-      HOLDINGS_PAGE_SIZE: ${{ inputs.holdings_page_size }}
-      HISTORY_PAGE_SIZE: ${{ inputs.history_page_size }}
-      HISTORY_RANGE: ${{ inputs.history_range }}
-      EDGAR_FALLBACK: ${{ inputs.edgar_fallback }}
-      SKIP_YAHOO: ${{ inputs.skip_yahoo }}
-      OUTPUT_DIR: api/tema
-      SEC_UA: ${{ vars.SEC_UA }}
-      VERBOSE: "true"
-
+    timeout-minutes: 30
     steps:
-      - name: Require monitored SEC contact
-        env:
-          SEC_UA: ${{ vars.SEC_UA }}
-        run: |
-          if [ -z "${SEC_UA//[[:space:]]/}" ]; then
-            echo "::error::Set the repository Actions variable SEC_UA to a monitored contact address before running the updater."
-            exit 1
-          fi
-
       - name: Checkout
         uses: actions/checkout@v7
-
+        with:
+          persist-credentials: false
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
       - name: Install dependencies
         run: bun install --frozen-lockfile
-
-      - name: Run offline tests
+      - name: Run updater unit tests
         run: bun test
-
+      - name: Resolve file defaults and manual overrides
+        env:
+          DISPATCH_INPUTS: ${{ toJSON(inputs) }}
+          PROTECTED_SEC_UA: ${{ vars.SEC_UA }}
+        run: |
+          bun --eval '
+            import { resolveControls } from "./scripts/update-data.ts";
+            import { appendFile } from "node:fs/promises";
+            // schedule runs have no dispatch inputs: file defaults apply as-is
+            const inputs = JSON.parse(process.env.DISPATCH_INPUTS || "{}");
+            const advanced = JSON.parse(inputs.advanced || "{}");
+            const individual = Object.fromEntries(Object.entries(inputs)
+              .filter(([key]) => key !== "advanced")
+              .map(([key, value]) => [key.toUpperCase(), value]));
+            const file = await Bun.file("scripts/update-data.config.json").json();
+            // Protected repository Actions variables: highest precedence, applied only when nonblank (never printed).
+            const protectedVars = {};
+            if ((process.env.PROTECTED_SEC_UA ?? "").trim()) protectedVars.SEC_UA = process.env.PROTECTED_SEC_UA.trim();
+            const controls = resolveControls(file, advanced, individual, protectedVars);
+            await appendFile(process.env.GITHUB_ENV,
+              Object.entries(controls).map(([key, value]) => `${key}=${value}\n`).join(""));
+          '
       - name: Generate api/tema static data
         run: bun ./scripts/update-data.ts
-
       - name: Commit updated data
+        if: ${{ !cancelled() }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          if [ -z "$(git status --porcelain --untracked-files=all -- api/tema)" ]; then
+          git add api/tema
+          if git diff --cached --quiet -- api/tema; then
             echo "api/tema is already up to date"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add api/tema
-          git commit -m "Update Tema ETF data"
-          git push
+          git commit -m "chore(data): update tema etf data"
+          # Runtime-only auth; no token/header stored in URL, file or Git config.
+          git -c credential.helper= -c credential.helper='!f() { if test "$1" = get; then printf "username=x-access-token\npassword=%s\n" "$GITHUB_TOKEN"; fi; }; f' push
