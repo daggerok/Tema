@@ -25,7 +25,7 @@ Run `bun scripts/update-data.ts -h` (or `--help`) to print every control with it
 
 Every supported control and its default lives in [`scripts/update-data.config.json`](./scripts/update-data.config.json); the updater, the `--help` text, the table below and the workflow all use the same `resolveControls` function, so they cannot drift apart. Precedence, lowest to highest: file defaults < `advanced` JSON < nonblank workflow inputs < protected Actions variable or environment variable. A blank workflow input inherits the file value, and `advanced` can deliberately set a key to an empty string. Unknown keys, non-scalar values and values with line breaks are rejected before any request is made.
 
-The scheduled/manual **Update Tema ETFs data** GitHub Actions workflow exposes 24 common controls as individual manual inputs plus one `advanced` input (25 in total, the GitHub limit). `advanced` takes a JSON object such as `{"SEC_YIELD": "2:", "VERBOSE": "false"}` and reaches every control that has no input of its own. Scheduled runs have no inputs, so they use the file defaults. All supplied filters use **AND** logic. The workflow takes the SEC contact from the protected repository Actions variable `SEC_UA` when it is set (nonblank values win over every other layer) and otherwise uses the non-personal descriptor from the config file; it always writes to `api/tema`, ignoring any `OUTPUT_DIR` override, and enables `VERBOSE` while generating data.
+The scheduled/manual **Update Tema ETFs data** GitHub Actions workflow exposes 24 common controls as individual manual inputs plus one `advanced` input (25 in total, the GitHub limit). `advanced` takes a JSON object such as `{"SEC_YIELD": "2:", "VERBOSE": "true"}` and reaches every control that has no input of its own. Scheduled runs have no inputs, so they use the file defaults. All supplied filters use **AND** logic. The workflow takes the SEC User-Agent from the protected repository Actions variable `SEC_UA` when it is set (nonblank values win over every other layer) and otherwise uses the config default; the output directory is `api/tema` from the config file and the workflow only stages `api/tema`. Add `{"VERBOSE": "true"}` to `advanced` for per-request notices in the run log.
 
 ### Data sources
 
@@ -59,7 +59,7 @@ Each fund carries a `metrics` object that powers the catalog columns shared with
 | `MAX_FETCHES` | `0` | Full catalog pass (the older `TEMA_LIMIT` environment name remains an alias); a positive value selects a resumable batch after the cursor in `api/tema/update-state.json`. A full pass clears the cursor. |
 | `REQUEST_SLEEP` | `1` | Minimum delay in seconds between outgoing request starts per provider lane, including retries. |
 | `CONCURRENCY` | `2` | Independently paced provider worker lanes. |
-| `MAX_RETRIES` | `2` | Retries after the initial request for network errors and HTTP 408/425/429/5xx responses. |
+| `MAX_RETRIES` | `2` | Retries after the initial request for network errors and HTTP 408/425/429/5xx responses; an integer of at least 1. |
 | `TICKERS` | all | Space-, comma- or semicolon-separated ticker allowlist, e.g. `VOLT WELD PRVT`. |
 | `CATEGORY` | all | Comma- or semicolon-separated category allowlist; the current catalog is Equity. The older `ASSET_CLASS` environment name remains an accepted alias. |
 | `AUM` | `:` | USD range; bounds accept bare dollars or `K`/`M`/`B`/`T` suffixes, or presets `nano` (<$10M), `micro` ($10M-$300M), `small` ($300M-$2B), `mid` ($2B-$10B), `large` (≥$10B). |
@@ -71,11 +71,11 @@ Each fund carries a `metrics` object that powers the catalog columns shared with
 | `HOLDINGS_PAGE_SIZE` | `250` | Rows in each generated current-holdings JSON page. |
 | `HISTORY_PAGE_SIZE` | `1000` | Rows in each generated history JSON page. |
 | `HISTORY_RANGE` | `max` | Maximum history or a bounded window such as `10y`. |
-| `OUTPUT_DIR` | `api/tema` | Static API output directory. The workflow always forces `api/tema`. |
+| `OUTPUT_DIR` | `api/tema` | Static API output directory; the workflow stages only `api/tema`. |
 | `EDGAR_FALLBACK` | `true` | Use SEC N-PORT-P holdings when Tema CSV/page holdings are unavailable. |
 | `SKIP_YAHOO` | `false` | When true, skip Yahoo history updates and retain previously published history. |
-| `SEC_UA` | repo descriptor | SEC User-Agent. The config default is a non-personal descriptor; use a real, monitored address when deploying - GitHub Actions reads it from the protected repository variable `SEC_UA`. |
-| `VERBOSE` | `false` | Show per-request/per-fund retry and fallback notices. The GitHub Actions workflow enables it for the data-generation step. |
+| `SEC_UA` | `daggerok ETF feed daggerok@gmail.com` | SEC User-Agent with a contact address; redacted in config logs. The protected repository Actions variable `SEC_UA` overrides it in the workflow. |
+| `VERBOSE` | `false` | Show per-request/per-fund retry and fallback notices. |
 
 Range syntax is inclusive `MIN:MAX`; either side may be empty, and `:` disables that filter. `TICKERS`, `CATEGORY`, AUM, TER, yield and return filters combine with **AND** logic. Funds not selected for a successful update retain their prior published metadata and data files.
 
@@ -94,7 +94,7 @@ PERFORMANCE_1Y="15:" HISTORY_RANGE=10y bun scripts/update-data.ts
 
 The browser app is intentionally build-free: `index.html` carries the markup, styles and bootstrap, and `app.tsx` is TypeScript compiled in the browser with Babel standalone - no build step, no bundler, no `tsconfig.json` needed. Bun runs TypeScript out of the box.
 
-Verification before every publish: `bun install --frozen-lockfile`, `bun test`, `bun build --target=browser app.tsx --outfile=/dev/null`, `bun build --target=bun scripts/update-data.ts --outfile=/dev/null`, and `git diff --check`. The README, config file, `--help` text and workflow are kept in sync by `scripts/config-docs.test.ts` and `scripts/readme-parity.test.ts`.
+Verification before every publish: `bun install --frozen-lockfile`, `bun test`, `bun build --target=bun scripts/update-data.ts --outfile=/dev/null`, and `git diff --check`. The README, config file, `--help` text and workflow are kept in sync by `bun test`.
 
 ## Brands table
 
@@ -119,7 +119,7 @@ Verification before every publish: `bun install --frozen-lockfile`, `bun test`, 
 | **ProShares** | [proshares.com](https://www.proshares.com/our-etfs/find-proshares-etfs) \| [ProShares](https://daggerok.github.io/ProShares/) |
 | **Schwab** | [schwabassetmanagement.com](https://www.schwabassetmanagement.com/products) \| [Schwab](https://daggerok.github.io/Schwab/) |
 | **SPDR** | [ssga.com](https://www.ssga.com/us/en/intermediary/etfs/fund-finder) \| [SPDR](https://daggerok.github.io/SPDR/) |
-| **Sprott ETFs** | [sprottetfs.com](https://sprottetfs.com/) \| [Sprott](https://daggerok.github.io/Sprott/) (deployment pending) |
+| **Sprott ETFs** | [sprottetfs.com](https://sprottetfs.com/) \| [Sprott](https://daggerok.github.io/Sprott/) |
 | **Tema ETFs** | [temaetfs.com](https://temaetfs.com/funds) \| [Tema](https://daggerok.github.io/Tema/) |
 | **Themes ETFs** | [themesetfs.com/etfs](https://themesetfs.com/etfs) \| [Themes](https://daggerok.github.io/Themes/) |
 | **VanEck** | [vaneck.com](https://www.vaneck.com/us/en/etf-mutual-fund-finder/) \| [VanEck](https://daggerok.github.io/VanEck/) |
