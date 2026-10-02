@@ -6,6 +6,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'bun:test';
 import {
+  CONTROL_NAMES,
+  resolveControls,
+  runtimeControls,
   buildPages,
   buildIndexDocument,
   buildPageManifest,
@@ -78,8 +81,26 @@ import {
   writeJsonIfChanged,
 } from './update-data.ts';
 
-const holdingsFixture = readFileSync(new URL('./fixtures/tema-holdings-2026-09-29.csv', import.meta.url), 'utf8');
-const fundPageFixture = readFileSync(new URL('./fixtures/tema-volt-page-2026-09-29.html', import.meta.url), 'utf8');
+// Small inline samples of the official Tema VOLT holdings CSV and fund page (no network, no fixture files)
+const holdingsFixture = `holdings_date,ticker,cusip,proper_name,shares,market_value,percent_of_nav,is_cash,country,sector
+2026-09-29,BELFB,077347300,BEL FUSE INC,199922,48804958.64,0.0671,0,United States,Information Technology
+2026-09-29,APH,032095101,AMPHENOL CORP,575893,48547779.9,0.0668,0,United States,Information Technology
+2026-09-29,ETN,G29183103,EATON CORP PLC,107327,46119485.17,0.0634,0,Ireland,Industrials
+`;
+const fundPageFixture = `<h1>VOLT Tema Electrification ETF</h1>
+<div class="box"><div class="col-specification"><span>Ticker</span></div><div class="col-details">VOLT</div></div>
+<div class="box"><div class="col-specification"><span>CUSIP</span></div><div class="col-details">87975E834</div></div>
+<div class="box"><div class="col-specification"><span>Inception Date</span></div><div class="col-details">12/03/24</div></div>
+<div class="box"><div class="col-specification"><span>Total Expense Ratio</span></div><div class="col-details">0.75%</div></div>
+<div class="box"><div class="col-specification"><span>AUM</span></div><div class="col-details">$734,149,760</div></div>
+<div class="box"><div class="col-specification"><span>Primary Exchange</span></div><div class="col-details">Nasdaq</div></div>
+<div class="box"><div class="col-specification"><span>Shares Outstanding</span></div><div class="col-details">20,500,000</div></div>
+<div class="box"><div class="col-specification"><span># of Holdings</span></div><div class="col-details">27</div></div>
+<div class="price-table__row"><span>NAV</span><span>$35.81</span></div>
+<div class="price-table__row"><span>Market Price</span><span>$35.85</span></div>
+<div class="price-table__row"><span>Premium/Discount</span><span>0.11%</span></div>
+<div class="as-of-date-container"> As of September 29, 2026 </div>
+`;
 
 describe('parseCsv', () => {
   test('supports CRLF, quoted commas, doubled quotes, embedded newlines and a UTF-8 BOM', () => {
@@ -270,7 +291,7 @@ describe('Tema updater configuration and filters', () => {
       TEMA_LIMIT: '5',
       REQUEST_SLEEP: '0.25',
       CONCURRENCY: '3',
-      MAX_RETRIES: '0',
+      MAX_RETRIES: '1',
       TICKERS: 'volt, army;DSPY',
       CATEGORY: 'equity, fixed income',
       AUM: 'micro',
@@ -291,7 +312,7 @@ describe('Tema updater configuration and filters', () => {
       maxFetches: 5,
       requestSleepSeconds: 0.25,
       concurrency: 3,
-      maxRetries: 0,
+      maxRetries: 1,
       tickers: ['VOLT', 'ARMY', 'DSPY'],
       categories: ['equity', 'fixed income'],
       aumRange: { min: 10_000_000, max: 300_000_000 },
@@ -867,7 +888,7 @@ describe('Tema updater orchestration with offline provider fixtures', () => {
       yahoo: { fetch: async () => ok(JSON.stringify(chartPayload), 'application/json') },
       sec: { fetch: async () => { secRequests += 1; return new Response('unexpected SEC request', { status: 403 }); } },
     };
-    const config = readUpdaterConfig({ OUTPUT_DIR: directory, TICKERS: 'VOLT', REQUEST_SLEEP: '0', MAX_RETRIES: '0' });
+    const config = readUpdaterConfig({ OUTPUT_DIR: directory, TICKERS: 'VOLT', REQUEST_SLEEP: '0', MAX_RETRIES: '1' });
     const log = console.log;
     console.log = () => undefined;
     const snapshot = async (): Promise<string> => {
@@ -905,7 +926,7 @@ describe('Tema updater orchestration with offline provider fixtures', () => {
         yahoo: { fetch: async () => new Response('unavailable', { status: 503 }) },
         sec: { fetch: async () => new Response('disabled', { status: 403 }) },
       };
-      const retentionConfig = readUpdaterConfig({ OUTPUT_DIR: directory, TICKERS: 'VOLT', REQUEST_SLEEP: '0', MAX_RETRIES: '0', EDGAR_FALLBACK: 'false' });
+      const retentionConfig = readUpdaterConfig({ OUTPUT_DIR: directory, TICKERS: 'VOLT', REQUEST_SLEEP: '0', MAX_RETRIES: '1', EDGAR_FALLBACK: 'false' });
       const retained = await runUpdater(retentionConfig, failingClients);
       expect(retained).toMatchObject({ selectedCount: 1, updatedCount: 0, skippedCount: 1, failures: 0, holdings: 3, history: 2 });
       expect(await snapshot()).toBe(firstSnapshot);
@@ -948,7 +969,7 @@ describe('Tema bounded updater cursor', () => {
       yahoo: { fetch: async () => new Response('disabled', { status: 403 }) },
       sec: { fetch: async () => new Response('disabled', { status: 403 }) },
     };
-    const config = readUpdaterConfig({ OUTPUT_DIR: directory, MAX_FETCHES: '1', REQUEST_SLEEP: '0', CONCURRENCY: '1', MAX_RETRIES: '0', EDGAR_FALLBACK: 'false', SKIP_YAHOO: 'true' });
+    const config = readUpdaterConfig({ OUTPUT_DIR: directory, MAX_FETCHES: '1', REQUEST_SLEEP: '0', CONCURRENCY: '1', MAX_RETRIES: '1', EDGAR_FALLBACK: 'false', SKIP_YAHOO: 'true' });
     const log = console.log;
     console.log = () => undefined;
     try {
@@ -967,5 +988,116 @@ describe('Tema bounded updater cursor', () => {
       console.log = log;
       await rm(directory, { recursive: true, force: true });
     }
+  });
+});
+
+const readRepo = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+const configFile = JSON.parse(readRepo('scripts/update-data.config.json')) as Record<string, string>;
+
+describe('control resolver', () => {
+  test('precedence: file < advanced < nonblank input < environment', () => {
+    const c = resolveControls({ CONCURRENCY: 2, TICKERS: 'VOLT' }, { CONCURRENCY: 3, TICKERS: 'WELD' }, { CONCURRENCY: '4', TICKERS: '' }, { CONCURRENCY: '5' });
+    expect(c.CONCURRENCY).toBe('5');
+    expect(c.TICKERS).toBe('WELD');
+    expect(resolveControls({ CONCURRENCY: 2 }, { CONCURRENCY: 3 }, { CONCURRENCY: '4' }).CONCURRENCY).toBe('4');
+    expect(resolveControls({ TICKERS: 'VOLT' }, {}, { TICKERS: '' }).TICKERS).toBe('VOLT');
+    expect(resolveControls({ TICKERS: 'VOLT' }, { TICKERS: '' }, { TICKERS: '' }).TICKERS).toBe('');
+    expect(resolveControls({ TICKERS: 'VOLT' }, {}, {}, { TICKERS: '' }).TICKERS).toBe('');
+    expect(resolveControls({ SKIP_YAHOO: true }, {}, {}, { SKIP_YAHOO: 'false' }).SKIP_YAHOO).toBe('false');
+    expect(resolveControls({ MAX_FETCHES: 0 }, {}, {}, { TEMA_LIMIT: '7' }).MAX_FETCHES).toBe('7');
+    expect(resolveControls({ CATEGORY: '' }, {}, {}, { ASSET_CLASS: 'Equity' }).CATEGORY).toBe('Equity');
+  });
+
+  test('scheduled path (empty inputs and advanced) equals the config defaults', () => {
+    expect(resolveControls(configFile, {}, {})).toEqual(configFile);
+    const config = readUpdaterConfig(resolveControls(configFile));
+    expect(config).toMatchObject({
+      maxFetches: 0, requestSleepSeconds: 1, concurrency: 2, maxRetries: 2, holdingsPageSize: 250,
+      historyPageSize: 1000, historyRange: 'max', edgarFallback: true, skipYahoo: false, tickers: [],
+      secUserAgent: 'daggerok ETF feed daggerok@gmail.com',
+    });
+    expect(config.outputDir.endsWith('api/tema')).toBe(true);
+    expect(readUpdaterConfig({}).secUserAgent).toBe(configFile.SEC_UA);
+  });
+
+  test('rejects unknown keys, non-scalars, newlines and invalid values', () => {
+    for (const value of [{ UNKNOWN: 1 }, { SEC_UA: 'x\nEVIL=yes' }, { CONCURRENCY: 0 }, { MAX_RETRIES: 0 }, { MAX_RETRIES: -1 }, { MAX_FETCHES: 1.5 }, { REQUEST_SLEEP: '-1' }, { VERBOSE: 'maybe' }, { SKIP_YAHOO: 'maybe' }, { AUM: '1:2:3' }, { TER: '2:1' }, { HISTORY_RANGE: '10d' }, { TICKERS: ['VOLT'] }, null, []]) {
+      expect(() => resolveControls(value)).toThrow();
+    }
+    expect(() => resolveControls({}, { SEC_UA: 'x\rfoo' })).toThrow();
+    expect(() => resolveControls({}, {}, {}, { SEC_UA: 'x\0bad' })).toThrow();
+    expect(() => resolveControls({}, [] as unknown)).toThrow();
+    expect(() => resolveControls({}, {}, {}, { MAX_RETRIES: '0' })).toThrow();
+    expect(() => JSON.parse('{bad')).toThrow();
+  });
+
+  test('runtimeControls reads the tracked config file and env overrides win', async () => {
+    const controls = await runtimeControls({ TICKERS: 'VOLT', REQUEST_SLEEP: '0' });
+    expect(controls.TICKERS).toBe('VOLT');
+    expect(controls.REQUEST_SLEEP).toBe('0');
+    expect(controls.HISTORY_PAGE_SIZE).toBe('1000');
+  });
+
+  test('config keys == CONTROL_NAMES == --help == README rows, all values strings', () => {
+    expect(Object.keys(configFile).sort()).toEqual([...CONTROL_NAMES].sort());
+    for (const value of Object.values(configFile)) expect(typeof value).toBe('string');
+    const doc = readRepo('README.md');
+    const help = updaterHelpText();
+    for (const name of CONTROL_NAMES) {
+      const tenor = name.match(/^(PERFORMANCE|TOTAL_RETURN)_(YTD|1Y|3Y|5Y|10Y)$/);
+      if (tenor) {
+        expect(doc).toContain(`\`${tenor[1]}_{YTD,1Y,3Y,5Y,10Y}\``);
+        expect(help).toContain(`${tenor[1]}_{YTD,1Y,3Y,5Y,10Y}`);
+      } else {
+        expect(doc).toContain(`| \`${name}\` |`);
+        expect(help).toContain(name);
+      }
+    }
+    expect(doc).toContain('scripts/update-data.config.json');
+  });
+});
+
+describe('README and workflow shape', () => {
+  test('README keeps the standard section order and verification commands', () => {
+    const doc = readRepo('README.md');
+    const headings = doc.split(/\r?\n/).filter(line => /^#{1,3} /.test(line));
+    expect(headings).toEqual([
+      '# Tema ETFs',
+      '## Using Bun',
+      '## Updating the static Tema ETFs data',
+      '### Data sources',
+      '### Metrics and caveats',
+      '### Update controls',
+      '### Examples',
+      '## TypeScript and verification',
+      '## Brands table',
+      '## Sibling applications',
+      '## License',
+    ]);
+    for (const command of ['bun install --frozen-lockfile', 'bun test', 'bun build --target=bun scripts/update-data.ts --outfile=/dev/null', 'git diff --check']) expect(doc).toContain(command);
+    expect(doc).toContain('file defaults < `advanced` JSON < nonblank workflow inputs < protected Actions variable or environment variable');
+    for (const value of ['https://temaetfs.com/funds', 'Tema ETF Trust (CIK `0001944285`)', 'holdings fallback only', 'not official NAV total returns']) expect(doc).toContain(value);
+  });
+
+  test('workflow: at most 25 inputs mapped to controls, fixed output dir, hardened, no direct input interpolation', () => {
+    const wf = readRepo('.github/workflows/update-data.yml');
+    const block = wf.slice(wf.indexOf('    inputs:'), wf.indexOf('\npermissions:'));
+    const names = [...block.matchAll(/^      (\w+):$/gm)].map(m => m[1]);
+    expect(names.length).toBeLessThanOrEqual(25);
+    expect(names).toContain('advanced');
+    expect(block).toContain("default: '{}'");
+    for (const name of names.filter(n => n !== 'advanced')) expect(CONTROL_NAMES).toContain(name.toUpperCase() as never);
+    expect(names).not.toContain('output_dir');
+    expect(wf).toContain("cron: '0 0 * * 0'");
+    expect(wf).toContain('toJSON(inputs)');
+    expect(wf).not.toMatch(/\$\{\{\s*(inputs|github\.event\.inputs)\./);
+    expect(configFile.OUTPUT_DIR).toBe('api/tema');
+    expect(wf).toContain('git add api/tema\n');
+    expect(wf).not.toMatch(/git add (?!api\/tema\b)/);
+    expect(wf).toContain('PROTECTED_SEC_UA: ${{ vars.SEC_UA }}');
+    expect(wf).toContain('resolveControls(file, advanced, individual, protectedVars)');
+    expect(wf).toContain('timeout-minutes: 30');
+    expect(wf).toContain('persist-credentials: false');
+    expect(wf).not.toMatch(/^\s{2}push:/m);
   });
 });
