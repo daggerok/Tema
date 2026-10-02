@@ -972,6 +972,28 @@ export function inferDistributionFrequency(dividends: ChartDividend[]): Frequenc
   return { frequency: 'Irregular', paymentsPerYear: null };
 }
 
+/** Honest label for how every return in the feed is computed (hub contract: never empty). */
+export const RETURNS_BASIS = 'derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)';
+
+/** Parse a label such as "Sep 30 2026" (as written by formatDateLabel) back to ISO YYYY-MM-DD, or null. */
+export function isoFromDateLabel(label: unknown): string | null {
+  const match = /^([A-Za-z]{3}) (\d{2}) (\d{4})$/.exec(typeof label === 'string' ? label.trim() : '');
+  if (!match) return null;
+  const month = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(match[1].toLowerCase());
+  if (month < 0) return null;
+  const date = new Date(Date.UTC(Number(match[3]), month, Number(match[2])));
+  if (date.getUTCMonth() !== month || date.getUTCDate() !== Number(match[2])) return null;
+  return epochToIsoDate(date.getTime() / 1000);
+}
+
+/** Put the mandatory returnsBasis and performanceAsOf keys last; basis never empty, as-of null or ISO. */
+export function withReturnsContract(metrics: Record<string, unknown>, performanceAsOf: unknown = metrics.performanceAsOf): Record<string, unknown> {
+  const { returnsBasis, performanceAsOf: _ignored, ...rest } = metrics;
+  const basis = typeof returnsBasis === 'string' && returnsBasis.trim() && returnsBasis.trim() !== '-' ? returnsBasis : RETURNS_BASIS;
+  const asOf = typeof performanceAsOf === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(performanceAsOf) ? performanceAsOf : null;
+  return { ...rest, returnsBasis: basis, performanceAsOf: asOf };
+}
+
 export type PeriodReturnMetrics = {
   asOfDate: string;
   mo1: number | null;
@@ -1069,7 +1091,7 @@ export function deriveTemaMetrics(chart: ParsedYahooChart): DerivedTemaMetrics {
   }
   if (!latest) {
     return {
-      metrics: { ytd: null, tr1y: null, tr3y: null, tr5y: null, tr10y: null, cagr3y: null, cagr5y: null, cagr10y: null, siAnn: null, dividendYield, secYield: null },
+      metrics: { ytd: null, tr1y: null, tr3y: null, tr5y: null, tr10y: null, cagr3y: null, cagr5y: null, cagr10y: null, siAnn: null, dividendYield, secYield: null, returnsBasis: RETURNS_BASIS, performanceAsOf: null },
       monthEnd: { asOfDate: '', mo1: null, qtd: null, ytd: null, yr1: null, yr3: null, yr5: null, yr10: null, sinceInception: null },
       quarterEnd: { asOfDate: '', mo1: null, qtd: null, ytd: null, yr1: null, yr3: null, yr5: null, yr10: null, sinceInception: null },
       dividendYield, latestDividend, frequency,
@@ -1096,6 +1118,8 @@ export function deriveTemaMetrics(chart: ParsedYahooChart): DerivedTemaMetrics {
       siAnn: latestReturns.sinceInception,
       dividendYield,
       secYield: null,
+      returnsBasis: RETURNS_BASIS,
+      performanceAsOf: latest.date,
     },
     monthEnd,
     quarterEnd,
@@ -1335,11 +1359,12 @@ export function minimalIndexFund(fund: TemaFund, previousValue: unknown = null):
     premiumDiscountValue: null,
     distributions: { frequency: null, exDate: null, dividend: null },
     returns: { monthEnd: emptyReturnSet(), quarterEnd: emptyReturnSet() },
-    metrics: { ytd: null, tr1y: null, tr3y: null, tr5y: null, tr10y: null, cagr3y: null, cagr5y: null, cagr10y: null, siAnn: null, dividendYield: null, secYield: null },
+    metrics: { ytd: null, tr1y: null, tr3y: null, tr5y: null, tr10y: null, cagr3y: null, cagr5y: null, cagr10y: null, siAnn: null, dividendYield: null, secYield: null, returnsBasis: RETURNS_BASIS, performanceAsOf: null },
     holdings: 0,
     history: 0,
   };
-  return { ...base, ...previous, ticker: fund.ticker, name: fund.name, fundPage: fund.fundPage, dataFile: `./funds/${fund.ticker}/meta.json` };
+  const merged = { ...base, ...previous, ticker: fund.ticker, name: fund.name, fundPage: fund.fundPage, dataFile: `./funds/${fund.ticker}/meta.json` };
+  return { ...merged, metrics: withReturnsContract({ ...recordOf(base.metrics), ...recordOf(previous.metrics) }) };
 }
 
 export function buildIndexDocument(funds: Array<Record<string, unknown>>, generatedAt: string, catalogReadAt: string): Record<string, unknown> {
@@ -1763,6 +1788,8 @@ export function buildTemaFundMeta(input: TemaMetaBuildInput): Record<string, unk
     },
     returns: {
       derivedFrom: 'Yahoo Finance adjusted-close total-return proxy; not official NAV total returns',
+      returnsBasis: RETURNS_BASIS,
+      performanceAsOf: isoFromDateLabel(chartReturns.monthEnd.asOfDate),
       monthEnd: returnSetForMeta(chartReturns.monthEnd),
       quarterEnd: returnSetForMeta(chartReturns.quarterEnd),
     },
@@ -1816,6 +1843,8 @@ export function indexFundFromMeta(fund: TemaFund, metaValue: unknown): Record<st
     siAnn: numberOrNull(monthEnd.sinceInception),
     dividendYield: numberOrNull(yields.dividendYield),
     secYield: numberOrNull(yields.secYield),
+    returnsBasis: typeof returns.returnsBasis === 'string' ? returns.returnsBasis : '',
+    performanceAsOf: returns.performanceAsOf ?? isoFromDateLabel(monthEnd.asOfDate),
   };
   return {
     ticker: fund.ticker,
@@ -1844,7 +1873,7 @@ export function indexFundFromMeta(fund: TemaFund, metaValue: unknown): Record<st
       dividend: String(latestDistribution[1] ?? '') || null,
     },
     returns: { monthEnd: returns.monthEnd ?? emptyReturnSet(), quarterEnd: returns.quarterEnd ?? emptyReturnSet() },
-    metrics,
+    metrics: withReturnsContract(metrics),
     holdings: numberOrNull(holdings.totalRows) ?? 0,
     history: numberOrNull(history.totalRows) ?? 0,
   };
@@ -2029,7 +2058,8 @@ function preservePreviousDividendFrequency(meta: Record<string, unknown>, previo
 function candidateIndexRow(fund: TemaFund, meta: Record<string, unknown>, previousIndex: unknown): Record<string, unknown> {
   const projected = indexFundFromMeta(fund, meta);
   const fallback = minimalIndexFund(fund, previousIndex);
-  return recordOf(mergePublishedFallback(projected, fallback));
+  const row = recordOf(mergePublishedFallback(projected, fallback));
+  return { ...row, metrics: withReturnsContract(recordOf(row.metrics)) };
 }
 
 function reconcileFreshSources(meta: Record<string, unknown>, prepared: Pick<PreparedFund, 'holdings' | 'history' | 'nport'>): void {
