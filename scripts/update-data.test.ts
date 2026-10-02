@@ -18,6 +18,9 @@ import {
   formatTemaMoney,
   formatTemaPercent,
   indexFundFromMeta,
+  isoFromDateLabel,
+  RETURNS_BASIS,
+  withReturnsContract,
   mergePublishedFallback,
   yahooDistributionRows,
   yahooHistoryRows,
@@ -103,6 +106,8 @@ const fundPageFixture = `<h1>VOLT Tema Electrification ETF</h1>
 <div class="price-table__row"><span>Premium/Discount</span><span>0.11%</span></div>
 <div class="as-of-date-container"> As of September 29, 2026 </div>
 `;
+
+function recordOfTest(value: unknown): Record<string, unknown> { return value as Record<string, unknown>; }
 
 describe('parseCsv', () => {
   test('supports CRLF, quoted commas, doubled quotes, embedded newlines and a UTF-8 BOM', () => {
@@ -616,6 +621,22 @@ describe('Tema catalog cursor and index builders', () => {
     expect(selectUpdateBatch(funds, 'DSPY', 0).map(fund => fund.ticker)).toEqual(['ARMY', 'CANC', 'DICE', 'DSPY']);
   });
 
+  test('metrics contract: non-empty returnsBasis, ISO performanceAsOf or null, young funds keep null returns', () => {
+    expect(RETURNS_BASIS).toMatch(/Yahoo/);
+    expect(isoFromDateLabel('Sep 30 2026')).toBe('2026-09-30');
+    expect(isoFromDateLabel('Feb 31 2026')).toBe(null);
+    expect(isoFromDateLabel('')).toBe(null);
+    expect(isoFromDateLabel(undefined)).toBe(null);
+    expect(withReturnsContract({ ytd: null, returnsBasis: '-', performanceAsOf: 'Sep 30 2026' })).toEqual({ ytd: null, returnsBasis: RETURNS_BASIS, performanceAsOf: null });
+    expect(Object.keys(withReturnsContract({ performanceAsOf: '2026-09-30', returnsBasis: 'x', ytd: 1 }))).toEqual(['ytd', 'returnsBasis', 'performanceAsOf']);
+    const fund = { ticker: 'NEW', name: 'New ETF', fundPage: 'https://temaetfs.com/new' };
+    const young = indexFundFromMeta(fund, { returns: { monthEnd: { asOfDate: 'Sep 30 2026', yr1: null, ytd: 1.5 } } });
+    expect(young.metrics).toMatchObject({ ytd: 1.5, tr1y: null, tr3y: null, performanceAsOf: '2026-09-30', returnsBasis: RETURNS_BASIS });
+    expect(indexFundFromMeta(fund, {}).metrics).toMatchObject({ performanceAsOf: null, returnsBasis: RETURNS_BASIS });
+    const blank = minimalIndexFund(fund, { metrics: { ytd: 3 } });
+    expect(blank.metrics).toMatchObject({ ytd: 3, tr1y: null, returnsBasis: RETURNS_BASIS, performanceAsOf: null });
+  });
+
   test('builds a usable blank catalog row and preserves previous published metrics', () => {
     const blank = minimalIndexFund({ ticker: 'VOLT', name: 'VOLT Electrification ETF', fundPage: 'https://temaetfs.com/volt' });
     expect(blank).toMatchObject({ ticker: 'VOLT', category: 'Equity', dataFile: './funds/VOLT/meta.json', terValue: null, navValue: null, holdings: 0, history: 0 });
@@ -813,6 +834,9 @@ describe('Tema metadata and index projection', () => {
     const row = indexFundFromMeta(fund, meta);
     expect(row).toMatchObject({ ticker: 'VOLT', aumValue: 734149760, navValue: 35.81, closePriceValue: 35.85, holdings: 27, history: 1 });
     expect(row.distributions).toMatchObject({ frequency: 'Unknown', exDate: '09/01/2026', dividend: '0.25' });
+    expect(meta.returns).toMatchObject({ returnsBasis: RETURNS_BASIS, performanceAsOf: '2026-09-29' });
+    expect(Object.keys(recordOfTest(row.metrics)).slice(-2)).toEqual(['returnsBasis', 'performanceAsOf']);
+    expect(row.metrics).toMatchObject({ returnsBasis: RETURNS_BASIS, performanceAsOf: '2026-09-29' });
     expect(formatTemaMoney(734149760)).toBe('$734.15 M');
     expect(formatTemaPercent(-1)).toBe('-1.00%');
   });

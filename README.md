@@ -51,6 +51,10 @@ Each fund carries a `metrics` object that powers the catalog columns shared with
 - `siAnn` - annualized estimate since the first available history row, when sufficient history is available -> *SI Ann.*
 - `dividendYield` - 12-month trailing yield from observed Yahoo distributions when available
 - `secYield` - reserved for a published SEC-yield value; currently unavailable in the generated feed
+- `returnsBasis` - mandatory non-empty text saying how the returns are computed: here always Yahoo Finance adjusted close at the last completed month-end (an estimate, not official Tema NAV total returns)
+- `performanceAsOf` - mandatory ISO `YYYY-MM-DD` date the returns are as of: the Yahoo close date of that month-end anchor (not the NAV date), `null` only when no price history exists
+
+Unavailable return values stay `null`, never `0` (young funds have no 1-year or longer figures).
 
 ### Update controls
 
