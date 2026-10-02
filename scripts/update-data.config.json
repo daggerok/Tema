@@ -25,6 +25,6 @@
   "OUTPUT_DIR": "api/tema",
   "EDGAR_FALLBACK": "true",
   "SKIP_YAHOO": "false",
-  "SEC_UA": "Tema ETF static feed updater https://github.com/daggerok/Tema",
+  "SEC_UA": "daggerok ETF feed daggerok@gmail.com",
   "VERBOSE": "false"
 }

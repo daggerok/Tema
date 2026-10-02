@@ -454,11 +454,11 @@ export function readUpdaterConfig(env: Record<string, string | undefined> = proc
     maxFetches: parsePositiveInt(envValue(env, 'MAX_FETCHES', ['TEMA_LIMIT']), 0, true),
     requestSleepSeconds: parseDecimal(envValue(env, 'REQUEST_SLEEP'), 1),
     concurrency: parsePositiveInt(envValue(env, 'CONCURRENCY'), 2),
-    maxRetries: parsePositiveInt(envValue(env, 'MAX_RETRIES'), 2, true),
+    maxRetries: parsePositiveInt(envValue(env, 'MAX_RETRIES'), 2),
     holdingsPageSize: parsePositiveInt(envValue(env, 'HOLDINGS_PAGE_SIZE'), 250),
     historyPageSize: parsePositiveInt(envValue(env, 'HISTORY_PAGE_SIZE'), 1000),
     historyRange: parseHistoryRange(envValue(env, 'HISTORY_RANGE')),
-    secUserAgent: envValue(env, 'SEC_UA') ?? 'Tema ETF updater research@example.com',
+    secUserAgent: envValue(env, 'SEC_UA') ?? 'daggerok ETF feed daggerok@gmail.com',
     outputDir,
     tickers: parseList(envValue(env, 'TICKERS')).map(value => value.toUpperCase()),
     categories: parseCategoryList(envValue(env, 'CATEGORY', ['ASSET_CLASS'])),
@@ -611,7 +611,7 @@ function outputNote(message: string): void {
 
 function outputPrintConfig(brand: string, config: UpdaterConfig): void {
   const entries = [...outputConfigEntries(config), ['VERBOSE', String(outputVerbose())] as [string, string]];
-  console.log(`[ config   ] ${brand} updater:\n${entries.map(([key, value]) => `              ${key}=${/TOKEN|PASSWORD|SECRET|COOKIE/i.test(key) ? '<redacted>' : outputClean(value)}`).join('\n')}`);
+  console.log(`[ config   ] ${brand} updater:\n${entries.map(([key, value]) => `              ${key}=${/TOKEN|PASSWORD|SECRET|COOKIE|SEC_UA/i.test(key) ? '<redacted>' : outputClean(value)}`).join('\n')}`);
 }
 
 function outputPrintFilter(selected: number, total: number, deferred = false): void {
@@ -1852,7 +1852,7 @@ export function hasDataDependentFilters(config: UpdaterConfig): boolean {
 
 export function outputPrintConfig(brand: string, config: UpdaterConfig): void {
   const entries: Array<[string, string]> = [...outputConfigEntries(config), ['VERBOSE', String(outputVerbose())]];
-  console.log(`[ config   ] ${brand} updater:\n${entries.map(([key, value]) => `              ${key}=${/TOKEN|PASSWORD|SECRET|COOKIE/i.test(key) ? '<redacted>' : outputClean(value)}`).join('\n')}`);
+  console.log(`[ config   ] ${brand} updater:\n${entries.map(([key, value]) => `              ${key}=${/TOKEN|PASSWORD|SECRET|COOKIE|SEC_UA/i.test(key) ? '<redacted>' : outputClean(value)}`).join('\n')}`);
 }
 
 export function outputPrintFilter(selected: number, total: number, deferred = false): void {
@@ -1870,7 +1870,7 @@ Controls:
   MAX_FETCHES=0                 0 runs the full catalog; a positive value limits a resumable batch
   REQUEST_SLEEP=1               minimum seconds between requests per provider lane
   CONCURRENCY=2                 independently paced worker lanes per provider
-  MAX_RETRIES=2                 retries for network/408/425/429/5xx errors
+  MAX_RETRIES=2                 retries for network/408/425/429/5xx errors (integer >= 1)
   TICKERS="VOLT ARMY DSPY"      comma/space/semicolon-separated fund allowlist
   CATEGORY=equity               comma/semicolon-separated category allowlist (Tema default: Equity)
   AUM=MIN:MAX                   USD bounds or nano/micro/small/mid/large presets
@@ -1885,7 +1885,7 @@ Controls:
   OUTPUT_DIR=api/tema           static API output directory
   EDGAR_FALLBACK=true           use SEC N-PORT-P for holdings when Tema CSV/page data is unavailable
   SKIP_YAHOO=false              retain prior history instead of requesting Yahoo when true
-  SEC_UA="Company contact@example.org" descriptive SEC User-Agent; set a real contact address when deploying
+  SEC_UA="daggerok ETF feed daggerok@gmail.com" SEC User-Agent with a contact address (redacted in logs)
   VERBOSE=false                 show per-request/per-fund retry and fallback notices
 
 A full run always ignores and clears the saved MAX_FETCHES cursor. TICKERS filters
