@@ -76,10 +76,11 @@ Each fund carries a `metrics` object that powers the catalog columns shared with
 | `SKIP_YAHOO` | `false` | When true, skip Yahoo history updates and retain previously published history. |
 | `SEC_UA` | `daggerok ETF feed daggerok@gmail.com` | SEC User-Agent with a contact address; redacted in config logs. The protected repository Actions variable `SEC_UA` overrides it in the workflow. |
 | `VERBOSE` | `false` | Show per-request/per-fund retry and fallback notices. |
+| `USE_SYSTEM_CA` | `auto` | TLS trust store: `auto` restarts the updater once with Bun's `--use-system-ca` when a request fails with an untrusted-certificate error; `true` always uses the system CA store; `false` never restarts. Not an individual workflow input: use `advanced`, the config file or the CLI environment. |
 
 Range syntax is inclusive `MIN:MAX`; either side may be empty, and `:` disables that filter. `TICKERS`, `CATEGORY`, AUM, TER, yield and return filters combine with **AND** logic. Funds not selected for a successful update retain their prior published metadata and data files.
 
-The workflow inputs are the lowercase names of the controls above (for example `max_fetches`, `performance_1y`); only `SEC_YIELD`, `OUTPUT_DIR`, `SEC_UA` and `VERBOSE` have no individual input. The `SEC_YIELD` bound can be set through `advanced`.
+The workflow inputs are the lowercase names of the controls above (for example `max_fetches`, `performance_1y`); only `SEC_YIELD`, `OUTPUT_DIR`, `SEC_UA`, `VERBOSE` and `USE_SYSTEM_CA` have no individual input. The `SEC_YIELD` bound can be set through `advanced`.
 
 ### Examples
 
