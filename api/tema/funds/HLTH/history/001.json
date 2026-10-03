@@ -2,7 +2,7 @@
   "ticker": "HLTH",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 52,
+  "totalRows": 53,
   "headers": [
     "Date",
     "NAV",
@@ -319,7 +319,13 @@
     {
       "Date": "Oct 01 2026",
       "NAV": "",
-      "Market Price": "29.508499",
+      "Market Price": "29.51",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 02 2026",
+      "NAV": "",
+      "Market Price": "29.68",
       "Premium/Discount": ""
     }
   ]

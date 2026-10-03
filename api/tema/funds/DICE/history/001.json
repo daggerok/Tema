@@ -2,7 +2,7 @@
   "ticker": "DICE",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 17,
+  "totalRows": 18,
   "headers": [
     "Date",
     "NAV",
@@ -109,7 +109,13 @@
     {
       "Date": "Oct 01 2026",
       "NAV": "",
-      "Market Price": "24.580299",
+      "Market Price": "24.58",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 02 2026",
+      "NAV": "",
+      "Market Price": "24.08",
       "Premium/Discount": ""
     }
   ]

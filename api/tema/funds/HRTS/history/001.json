@@ -2,7 +2,7 @@
   "ticker": "HRTS",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 717,
+  "totalRows": 718,
   "headers": [
     "Date",
     "NAV",
@@ -4309,7 +4309,13 @@
     {
       "Date": "Oct 01 2026",
       "NAV": "",
-      "Market Price": "35.8517",
+      "Market Price": "35.852001",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 02 2026",
+      "NAV": "",
+      "Market Price": "35.804001",
       "Premium/Discount": ""
     }
   ]
