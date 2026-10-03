@@ -1,7 +1,7 @@
 /// <reference types="bun" />
 
 import { readFileSync } from 'node:fs';
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, test } from 'bun:test';
@@ -21,6 +21,7 @@ import {
   isoFromDateLabel,
   RETURNS_BASIS,
   withReturnsContract,
+  allFundsFailed,
   carryPreviousSections,
   nportBelongsToTema,
   nportIsNewerThanPublished,
@@ -38,6 +39,7 @@ import {
   printHelp,
   updaterHelpText,
   createRequestGate,
+  SOFT_DEADLINE_MS,
   isRetryableHttpStatus,
   decodeTemaCsv,
   deriveTemaMetrics,
@@ -493,8 +495,8 @@ describe('Tema source encodings and Yahoo chart normalization', () => {
     expect(parsed.exchangeName).toBe('Nasdaq');
     expect(parsed.currency).toBe('USD');
     expect(parsed.days).toEqual([
-      { date: '2026-09-26', close: 10.123457, adjClose: 10.12, volume: 100 },
-      { date: '2026-09-29', close: 12.345678, adjClose: 12.35, volume: 300 },
+      { date: '2026-09-26', close: 10.123457, adjClose: 10.124, volume: 100 },
+      { date: '2026-09-29', close: 12.345678, adjClose: 12.349, volume: 300 },
     ]);
     expect(parsed.dividends).toEqual([{ date: '2026-09-01', amount: 0.125 }]);
     expect(() => parseYahooChart({ chart: { result: [] } })).toThrow('empty result');
@@ -641,9 +643,11 @@ describe('Tema catalog cursor and index builders', () => {
 
   test('builds a usable blank catalog row and preserves previous published metrics', () => {
     const blank = minimalIndexFund({ ticker: 'VOLT', name: 'VOLT Electrification ETF', fundPage: 'https://temaetfs.com/volt' });
-    expect(blank).toMatchObject({ ticker: 'VOLT', category: 'Equity', dataFile: './funds/VOLT/meta.json', terValue: null, navValue: null, holdings: 0, history: 0 });
+    expect(blank).toMatchObject({ ticker: 'VOLT', category: 'Equity', dataFile: null, terGrossValue: null, terValue: null, navValue: null, holdings: 0, history: 0 });
     const previous = minimalIndexFund({ ticker: 'VOLT', name: 'VOLT Electrification ETF', fundPage: 'https://temaetfs.com/volt' }, { metrics: { ytd: 12 }, holdings: 27, category: 'U.S. Equity' });
-    expect(previous).toMatchObject({ category: 'U.S. Equity', metrics: { ytd: 12 }, holdings: 27, history: 0 });
+    expect(previous).toMatchObject({ category: 'U.S. Equity', metrics: { ytd: 12 }, holdings: 27, history: 0, dataFile: null });
+    expect(minimalIndexFund({ ticker: 'VOLT', name: 'VOLT', fundPage: 'https://temaetfs.com/volt' }, { dataFile: './funds/VOLT/meta.json' }).dataFile).toBe('./funds/VOLT/meta.json');
+    expect(Object.keys(recordOfTest(blank.metrics))).toEqual(['ytd', 'tr1y', 'tr3y', 'tr5y', 'tr10y', 'cagr3y', 'cagr5y', 'cagr10y', 'siAnn', 'dividendYield', 'dividendYieldText', 'secYield', 'secYieldText', 'returnsBasis', 'performanceAsOf']);
   });
 
   test('counts every retained fund and aggregates its existing data in index.json', () => {
@@ -895,7 +899,7 @@ describe('Tema metadata and index projection', () => {
     });
     expect(meta).toMatchObject({ ticker: 'VOLT', name: 'VOLT Electrification ETF', category: 'Equity' });
     expect(meta.source).toMatchObject({ yahooChart: 'https://query1.finance.yahoo.com/v8/finance/chart/VOLT', holdingsDownload: 'https://temaetfs.com/hubfs/holdings.csv' });
-    expect(meta.expenseRatio).toMatchObject({ display: '0.75%', value: 0.75, gross: 0.75, net: null });
+    expect(meta.expenseRatio).toMatchObject({ display: '0.75%', value: 0.75, gross: null, net: 0.75 });
     expect(meta.holdings).toMatchObject({ totalRows: 27, pages: ['holdings/001.json'] });
     expect(meta.distributions).toMatchObject({ frequency: 'Unknown', paymentsPerYear: null, rows: [['07/01/2026', '0.2'], ['09/01/2026', '0.25']] });
     expect(meta.yields).toMatchObject({ secYield: null, dividendYield: 1.26 });
@@ -1421,5 +1425,172 @@ describe('fallback freshness and retention (published data is never replaced by 
       expect(after.returns).toEqual(before.returns);
       expect(after.history).toEqual(before.history);
     });
+  });
+});
+
+describe('orchestration over a multi-fund catalog', () => {
+  const healthy = (tickers: string[], chart = dailyChart('2026-09-01', 29)) => ({ issuer: issuerFor(tickers), yahoo: yahooFor(chart), sec: downClient });
+  const readIndex = async (directory: string) => JSON.parse(await readFile(join(directory, 'index.json'), 'utf8'));
+
+  test('a one-ticker run keeps every other row and file, a failing run too (index never shrinks)', async () => {
+    await withQuietFeed(async directory => {
+      const tickers = ['AAA', 'BBB', 'CCC'];
+      await runUpdater(safetyEnv(directory, { EDGAR_FALLBACK: 'false' }), healthy(tickers));
+      expect((await readIndex(directory)).funds.map((row: { ticker: string }) => row.ticker)).toEqual(tickers);
+      const others = async () => JSON.stringify([await readFile(join(directory, 'funds', 'BBB', 'meta.json'), 'utf8'), await readFile(join(directory, 'funds', 'CCC', 'meta.json'), 'utf8')]);
+      const before = await others();
+      await runUpdater(safetyEnv(directory, { TICKERS: 'AAA', EDGAR_FALLBACK: 'false' }), healthy(tickers));
+      expect((await readIndex(directory)).funds).toHaveLength(3);
+      await runUpdater(safetyEnv(directory, { TICKERS: 'AAA', EDGAR_FALLBACK: 'false' }), { issuer: issuerFor(tickers, { down: true }), yahoo: downClient, sec: downClient });
+      expect((await readIndex(directory)).funds).toHaveLength(3);
+      expect(await others()).toBe(before);
+    });
+  });
+
+  test('a run twice with identical upstream data writes nothing the second time (zero diff)', async () => {
+    await withQuietFeed(async directory => {
+      const config = safetyEnv(directory, { EDGAR_FALLBACK: 'false' });
+      await runUpdater(config, healthy(['AAA', 'BBB']));
+      const first = await treeSnapshot(directory);
+      await runUpdater(config, healthy(['AAA', 'BBB']));
+      expect(await treeSnapshot(directory)).toBe(first);
+    });
+  });
+
+  test('an unknown TICKERS entry is an error before any request-driven write', async () => {
+    await withQuietFeed(async directory => {
+      await runUpdater(safetyEnv(directory, { EDGAR_FALLBACK: 'false' }), healthy(['AAA']));
+      const before = await treeSnapshot(directory);
+      await expect(runUpdater(safetyEnv(directory, { TICKERS: 'AAA NOPE', EDGAR_FALLBACK: 'false' }), healthy(['AAA']))).rejects.toThrow('Unknown TICKERS (not in the Tema catalog): NOPE');
+      expect(await treeSnapshot(directory)).toBe(before);
+    });
+  });
+
+  test('a fund without funds/<T>/meta.json gets dataFile null and a full metrics object; funds with meta are always listed', async () => {
+    await withQuietFeed(async directory => {
+      await runUpdater(safetyEnv(directory, { TICKERS: 'AAA', EDGAR_FALLBACK: 'false' }), healthy(['AAA', 'BBB']));
+      const funds = (await readIndex(directory)).funds;
+      expect(funds.find((row: { ticker: string }) => row.ticker === 'AAA').dataFile).toBe('./funds/AAA/meta.json');
+      const blank = funds.find((row: { ticker: string }) => row.ticker === 'BBB');
+      expect(blank.dataFile).toBeNull();
+      expect(Object.values(blank.metrics).filter(value => value === null)).toHaveLength(12);
+      expect(blank.metrics.returnsBasis).toBe(RETURNS_BASIS);
+      // drop AAA from the catalog and the previous index: its meta.json still keeps it listed
+      const index = await readIndex(directory);
+      index.funds = index.funds.filter((row: { ticker: string }) => row.ticker !== 'AAA');
+      await writeJsonIfChanged(join(directory, 'index.json'), index);
+      await runUpdater(safetyEnv(directory, { TICKERS: 'BBB', EDGAR_FALLBACK: 'false' }), healthy(['BBB']));
+      expect((await readIndex(directory)).funds.map((row: { ticker: string }) => row.ticker)).toEqual(['AAA', 'BBB']);
+    });
+  });
+
+  test('a TICKERS run neither deletes nor moves the MAX_FETCHES cursor; only a full run clears it', async () => {
+    await withQuietFeed(async directory => {
+      await runUpdater(safetyEnv(directory, { MAX_FETCHES: '1', CONCURRENCY: '1', EDGAR_FALLBACK: 'false' }), healthy(['AAA', 'BBB']));
+      const statePath = join(directory, 'update-state.json');
+      expect(JSON.parse(await readFile(statePath, 'utf8'))).toEqual({ cursor: 'AAA' });
+      await runUpdater(safetyEnv(directory, { TICKERS: 'BBB', EDGAR_FALLBACK: 'false' }), healthy(['AAA', 'BBB']));
+      expect(JSON.parse(await readFile(statePath, 'utf8'))).toEqual({ cursor: 'AAA' });
+      await runUpdater(safetyEnv(directory, { EDGAR_FALLBACK: 'false' }), healthy(['AAA', 'BBB']));
+      expect(await readFile(statePath, 'utf8').catch(() => 'gone')).toBe('gone');
+    });
+  });
+
+  test('the soft deadline stops taking funds but still writes the index with every row', async () => {
+    await withQuietFeed(async directory => {
+      await runUpdater(safetyEnv(directory, { EDGAR_FALLBACK: 'false' }), healthy(['AAA', 'BBB']));
+      const published = await treeSnapshot(directory);
+      const summary = await runUpdater(safetyEnv(directory, { EDGAR_FALLBACK: 'false' }), healthy(['AAA', 'BBB']), { deadlineMs: 0 });
+      expect(summary).toMatchObject({ selectedCount: 2, updatedCount: 0, skippedCount: 2 });
+      expect(await treeSnapshot(directory)).toBe(published);
+      expect(SOFT_DEADLINE_MS).toBe(25 * 60_000);
+    });
+  });
+
+  test('new catalog funds are announced as NEW FUNDS in the log and in GITHUB_STEP_SUMMARY', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'tema-new-test-'));
+    const summaryFile = join(directory, 'summary.md');
+    const output = join(directory, 'feed');
+    const lines: string[] = [];
+    const log = console.log;
+    const previousSummary = process.env.GITHUB_STEP_SUMMARY;
+    console.log = (...values: unknown[]) => { lines.push(values.map(String).join(' ')); };
+    process.env.GITHUB_STEP_SUMMARY = summaryFile;
+    try {
+      const config = safetyEnv(output, { EDGAR_FALLBACK: 'false', SKIP_YAHOO: 'true' });
+      await runUpdater(config, { issuer: issuerFor(['AAA']), yahoo: downClient, sec: downClient });
+      expect(lines.some(line => line.includes('NEW FUNDS'))).toBe(false);
+      await runUpdater(config, { issuer: issuerFor(['AAA', 'BBB', 'CCC']), yahoo: downClient, sec: downClient });
+      expect(lines.some(line => line.includes('NEW FUNDS: BBB, CCC'))).toBe(true);
+      expect(await readFile(summaryFile, 'utf8')).toBe('NEW FUNDS: BBB, CCC\n');
+    } finally {
+      console.log = log;
+      if (previousSummary === undefined) delete process.env.GITHUB_STEP_SUMMARY; else process.env.GITHUB_STEP_SUMMARY = previousSummary;
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test('allFundsFailed is true only when something was selected and every fund failed', () => {
+    expect(allFundsFailed({ catalogCount: 3, selectedCount: 2, updatedCount: 0, skippedCount: 0, failures: 2, holdings: 0, history: 0 })).toBe(true);
+    expect(allFundsFailed({ catalogCount: 3, selectedCount: 2, updatedCount: 1, skippedCount: 0, failures: 1, holdings: 0, history: 0 })).toBe(false);
+    expect(allFundsFailed({ catalogCount: 3, selectedCount: 0, updatedCount: 0, skippedCount: 0, failures: 0, holdings: 0, history: 0 })).toBe(false);
+  });
+});
+
+describe('write ordering, precision, dates and metrics shape', () => {
+  test('writeJsonIfChanged writes atomically: no temporary files remain, and a failed rename keeps the old content', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'tema-atomic-test-'));
+    try {
+      const target = join(directory, 'a.json');
+      expect(await writeJsonIfChanged(target, { a: 1 })).toBe(true);
+      expect(await writeJsonIfChanged(target, { a: 1, generatedAt: 'x' })).toBe(false);
+      expect(await writeJsonIfChanged(target, { a: 2 })).toBe(true);
+      expect((await readdir(directory)).sort()).toEqual(['a.json']);
+      const blocked = join(directory, 'dir.json');
+      await mkdir(blocked);
+      await expect(writeJsonIfChanged(blocked, { a: 3 })).rejects.toThrow();
+      expect((await readdir(directory)).sort()).toEqual(['a.json', 'dir.json']);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test('stale pages are removed only after the new meta.json exists', async () => {
+    await withQuietFeed(async directory => {
+      const run = (chart: unknown, extra: Record<string, string> = {}) => runUpdater(safetyEnv(directory, { TICKERS: 'AAA', EDGAR_FALLBACK: 'false', HISTORY_PAGE_SIZE: '10', ...extra }), { issuer: issuerFor(['AAA']), yahoo: yahooFor(chart), sec: downClient });
+      await run(dailyChart('2026-08-01', 29));
+      expect((await readdir(join(directory, 'funds', 'AAA', 'history'))).sort()).toEqual(['001.json', '002.json', '003.json']);
+      await run(dailyChart('2026-09-10', 20));
+      expect((await readdir(join(directory, 'funds', 'AAA', 'history'))).sort()).toEqual(['001.json', '002.json']);
+      const meta = JSON.parse(await readFile(join(directory, 'funds', 'AAA', 'meta.json'), 'utf8'));
+      expect(meta.history.pages).toEqual(['history/001.json', 'history/002.json']);
+    });
+  });
+
+  test('returns are computed from unrounded adjusted closes', () => {
+    const chart = parseYahooChart({ chart: { result: [{
+      meta: {},
+      timestamp: [isoEpoch('2025-12-31'), isoEpoch('2026-09-30')],
+      indicators: { quote: [{ close: [0.0041, 0.0049] }], adjclose: [{ adjclose: [0.0041, 0.0049] }] },
+    }] } });
+    expect(chart.days.map(day => day.adjClose)).toEqual([0.0041, 0.0049]);
+    expect(deriveTemaMetrics(chart).monthEnd.ytd).toBe(19.51);
+  });
+
+  test('since-inception is reported only for at least one year of history', () => {
+    const metricsFor = (days: number) => deriveTemaMetrics(parseYahooChart(dailyChart('2025-10-01', days))).monthEnd.sinceInception;
+    expect(metricsFor(300)).toBeNull();
+    expect(metricsFor(420)).not.toBeNull();
+  });
+
+  test('month-name dates parse as UTC regardless of the machine time zone', () => {
+    const script = `import { normalizeTemaDate, isoFromDateLabel } from ${JSON.stringify(new URL('./update-data.ts', import.meta.url).href)};
+      console.log(JSON.stringify([normalizeTemaDate('Sep 30 2026'), normalizeTemaDate('September 29, 2026'), isoFromDateLabel('Jun 04 2026'), new Date().getTimezoneOffset()]));`;
+    for (const zone of ['Pacific/Kiritimati', 'Pacific/Pago_Pago']) {
+      const result = Bun.spawnSync([process.execPath, '-e', script], { env: { ...process.env, TZ: zone }, stdout: 'pipe', stderr: 'pipe' });
+      const [first, second, third, offset] = JSON.parse(result.stdout.toString());
+      expect([first, second, third]).toEqual(['2026-09-30', '2026-09-29', '2026-06-04']);
+      expect(offset).not.toBe(0);
+    }
   });
 });

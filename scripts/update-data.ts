@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /// <reference types="bun" />
 
-import { mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, readFile, readdir, rename, unlink, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 
@@ -179,7 +179,7 @@ export function normalizeTemaDate(value: string): string {
     day = Number(compact[2]);
     year = Number(compact[3]);
   } else {
-    const parsed = new Date(text);
+    const parsed = new Date(/\b(?:utc|gmt|z)$|[+-]\d{2}:?\d{2}$/i.test(text) ? text : `${text} UTC`);
     if (!Number.isFinite(parsed.getTime())) return '';
     year = parsed.getUTCFullYear();
     month = parsed.getUTCMonth() + 1;
@@ -652,16 +652,16 @@ function outputNote(message: string): void {
   if (outputVerbose()) console.warn(message);
 }
 
-function outputPrintConfig(brand: string, config: UpdaterConfig): void {
+export function outputPrintConfig(brand: string, config: UpdaterConfig): void {
   const entries = [...outputConfigEntries(config), ['VERBOSE', String(outputVerbose())] as [string, string]];
   console.log(`[ config   ] ${brand} updater:\n${entries.map(([key, value]) => `              ${key}=${/TOKEN|PASSWORD|SECRET|COOKIE|SEC_UA/i.test(key) ? '<redacted>' : outputClean(value)}`).join('\n')}`);
 }
 
-function outputPrintFilter(selected: number, total: number, deferred = false): void {
+export function outputPrintFilter(selected: number, total: number, deferred = false): void {
   console.log(`[ filter   ] ${selected} of ${total} funds ${deferred ? 'selected for evaluation (data-dependent filters applied per fund)' : 'pass filters'}`);
 }
 
-function outputHasOutputFilters(config: UpdaterConfig): boolean {
+export function outputHasOutputFilters(config: UpdaterConfig): boolean {
   if (config.tickers.length || config.categories.length) return true;
   const ranges = [config.aumRange, config.terRange, config.dividendYieldRange, config.secYieldRange,
     ...RETURN_PERIODS.map(period => config.performanceRanges[period]),
@@ -831,7 +831,14 @@ export async function writeJsonIfChanged(filePath: string, value: unknown): Prom
   await mkdir(dirname(filePath), { recursive: true });
   const previous = await readFile(filePath, 'utf8').then(JSON.parse).catch(() => null);
   if (previous !== null && samePublishedContent(previous, value)) return false;
-  await writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  const temporary = `${filePath}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
+  try {
+    await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+    await rename(temporary, filePath);
+  } catch (error) {
+    await unlink(temporary).catch(() => undefined);
+    throw error;
+  }
   return true;
 }
 
@@ -894,7 +901,7 @@ export function epochToIsoDate(epochSeconds: number): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
 }
 
-/** Parse Yahoo chart history while rounding adjusted close to two decimals to eliminate source jitter. */
+/** Parse Yahoo chart history; adjusted close stays unrounded so returns are computed on full precision (only the results are rounded). */
 export function parseYahooChart(payload: unknown): ParsedYahooChart {
   const chart = recordOf(recordOf(payload).chart);
   const error = chart.error;
@@ -921,7 +928,7 @@ export function parseYahooChart(payload: unknown): ParsedYahooChart {
     days.push({
       date,
       close: roundTo(close, 6),
-      adjClose: roundTo(adjustedClose, 2),
+      adjClose: adjustedClose,
       volume: numberOrNull(volumes[index]) ?? 0,
     });
   }
@@ -1065,7 +1072,7 @@ function rangeReturnAtAnchor(days: ChartDay[], anchor: ChartDay): PeriodReturnMe
     yr3: annualizedReturn(threeYear, anchor, 3),
     yr5: annualizedReturn(fiveYear, anchor, 5),
     yr10: annualizedReturn(tenYear, anchor, 10),
-    sinceInception: sinceYears >= 0.75 ? annualizedReturn(first, anchor, sinceYears) : null,
+    sinceInception: sinceYears >= 1 ? annualizedReturn(first, anchor, sinceYears) : null,
   };
 }
 
@@ -1093,7 +1100,7 @@ export function deriveTemaMetrics(chart: ParsedYahooChart): DerivedTemaMetrics {
   }
   if (!latest) {
     return {
-      metrics: { ytd: null, tr1y: null, tr3y: null, tr5y: null, tr10y: null, cagr3y: null, cagr5y: null, cagr10y: null, siAnn: null, dividendYield, secYield: null, returnsBasis: RETURNS_BASIS, performanceAsOf: null },
+      metrics: { ytd: null, tr1y: null, tr3y: null, tr5y: null, tr10y: null, cagr3y: null, cagr5y: null, cagr10y: null, siAnn: null, dividendYield, dividendYieldText: formatTemaPercent(dividendYield), secYield: null, secYieldText: '—', returnsBasis: RETURNS_BASIS, performanceAsOf: null },
       monthEnd: { asOfDate: '', mo1: null, qtd: null, ytd: null, yr1: null, yr3: null, yr5: null, yr10: null, sinceInception: null },
       quarterEnd: { asOfDate: '', mo1: null, qtd: null, ytd: null, yr1: null, yr3: null, yr5: null, yr10: null, sinceInception: null },
       dividendYield, latestDividend, frequency,
@@ -1119,7 +1126,9 @@ export function deriveTemaMetrics(chart: ParsedYahooChart): DerivedTemaMetrics {
       cagr10y,
       siAnn: latestReturns.sinceInception,
       dividendYield,
+      dividendYieldText: formatTemaPercent(dividendYield),
       secYield: null,
+      secYieldText: '—',
       returnsBasis: RETURNS_BASIS,
       performanceAsOf: latest.date,
     },
@@ -1343,11 +1352,13 @@ export function minimalIndexFund(fund: TemaFund, previousValue: unknown = null):
     name: fund.name,
     category: 'Equity',
     fundPage: fund.fundPage,
-    dataFile: `./funds/${fund.ticker}/meta.json`,
+    dataFile: null,
     cusip: null,
     isin: null,
     ter: '—',
     terValue: null,
+    terGross: '—',
+    terGrossValue: null,
     nav: '—',
     navValue: null,
     aum: '—',
@@ -1361,11 +1372,11 @@ export function minimalIndexFund(fund: TemaFund, previousValue: unknown = null):
     premiumDiscountValue: null,
     distributions: { frequency: null, exDate: null, dividend: null },
     returns: { monthEnd: emptyReturnSet(), quarterEnd: emptyReturnSet() },
-    metrics: { ytd: null, tr1y: null, tr3y: null, tr5y: null, tr10y: null, cagr3y: null, cagr5y: null, cagr10y: null, siAnn: null, dividendYield: null, secYield: null, returnsBasis: RETURNS_BASIS, performanceAsOf: null },
+    metrics: { ytd: null, tr1y: null, tr3y: null, tr5y: null, tr10y: null, cagr3y: null, cagr5y: null, cagr10y: null, siAnn: null, dividendYield: null, dividendYieldText: '—', secYield: null, secYieldText: '—', returnsBasis: RETURNS_BASIS, performanceAsOf: null },
     holdings: 0,
     history: 0,
   };
-  const merged = { ...base, ...previous, ticker: fund.ticker, name: fund.name, fundPage: fund.fundPage, dataFile: `./funds/${fund.ticker}/meta.json` };
+  const merged = { ...base, ...previous, ticker: fund.ticker, name: fund.name, fundPage: fund.fundPage, dataFile: typeof previous.dataFile === 'string' ? previous.dataFile : null };
   return { ...merged, metrics: withReturnsContract({ ...recordOf(base.metrics), ...recordOf(previous.metrics) }) };
 }
 
@@ -1807,9 +1818,10 @@ export function buildTemaFundMeta(input: TemaMetaBuildInput): Record<string, unk
     },
     expenseRatio: {
       display: page?.ter || '—',
+      // Tema publishes a single "Total Expense Ratio" (no waiver split): it is the net figure; gross stays null instead of being invented.
       value: page?.terValue ?? null,
-      gross: page?.terValue ?? null,
-      net: null,
+      gross: null,
+      net: page?.terValue ?? null,
     },
     nav: { display: page?.nav || '—', value: page?.navValue ?? null, asOfDate: page?.asOfDate || asOfDate || null },
     marketPrice: { display: page?.closePrice || formatTemaMoney(latestPrice), value: page?.closePriceValue ?? latestPrice, asOfDate: page?.asOfDate || asOfDate || null },
@@ -1881,7 +1893,9 @@ export function indexFundFromMeta(fund: TemaFund, metaValue: unknown): Record<st
     cagr10y: metric10Y,
     siAnn: numberOrNull(monthEnd.sinceInception),
     dividendYield: numberOrNull(yields.dividendYield),
+    dividendYieldText: typeof yields.dividendYieldText === 'string' && yields.dividendYieldText ? yields.dividendYieldText : formatTemaPercent(numberOrNull(yields.dividendYield)),
     secYield: numberOrNull(yields.secYield),
+    secYieldText: typeof yields.secYieldText === 'string' && yields.secYieldText ? yields.secYieldText : formatTemaPercent(numberOrNull(yields.secYield)),
     returnsBasis: typeof returns.returnsBasis === 'string' ? returns.returnsBasis : '',
     performanceAsOf: returns.performanceAsOf ?? isoFromDateLabel(monthEnd.asOfDate),
   };
@@ -1894,7 +1908,9 @@ export function indexFundFromMeta(fund: TemaFund, metaValue: unknown): Record<st
     cusip: recordOf(meta.identifiers).cusip ?? null,
     isin: recordOf(meta.identifiers).isin ?? null,
     ter: expenseRatio.display ?? '—',
-    terValue: numberOrNull(expenseRatio.value),
+    terValue: numberOrNull(expenseRatio.net ?? expenseRatio.value),
+    terGross: numberOrNull(expenseRatio.gross) === null ? '—' : `${numberOrNull(expenseRatio.gross)?.toFixed(2)}%`,
+    terGrossValue: numberOrNull(expenseRatio.gross),
     nav: nav.display ?? '—',
     navValue: numberOrNull(nav.value),
     aum: aum.display ?? '—',
@@ -1937,24 +1953,9 @@ function stablePublicUrl(value: string): string {
   }
 }
 
-export function outputHasOutputFilters(config: UpdaterConfig): boolean {
-  return outputConfigEntries(config).some(([name, value]) =>
-    /^(TICKERS|CATEGORY|AUM|TER|DIVIDEND_YIELD|SEC_YIELD|PERFORMANCE_|TOTAL_RETURN_)/.test(name) &&
-    !['', ':', 'null', 'all'].includes(value));
-}
-
 export function hasDataDependentFilters(config: UpdaterConfig): boolean {
   return rangeActive(config.aumRange) || rangeActive(config.terRange) || rangeActive(config.dividendYieldRange) || rangeActive(config.secYieldRange) ||
     RETURN_PERIODS.some(period => rangeActive(config.performanceRanges[period]) || rangeActive(config.totalReturnRanges[period]));
-}
-
-export function outputPrintConfig(brand: string, config: UpdaterConfig): void {
-  const entries: Array<[string, string]> = [...outputConfigEntries(config), ['VERBOSE', String(outputVerbose())]];
-  console.log(`[ config   ] ${brand} updater:\n${entries.map(([key, value]) => `              ${key}=${/TOKEN|PASSWORD|SECRET|COOKIE|SEC_UA/i.test(key) ? '<redacted>' : outputClean(value)}`).join('\n')}`);
-}
-
-export function outputPrintFilter(selected: number, total: number, deferred = false): void {
-  console.log(`[ filter   ] ${selected} of ${total} funds ${deferred ? 'selected for evaluation (data-dependent filters applied per fund)' : 'pass filters'}`);
 }
 
 export function updaterHelpText(): string {
@@ -2167,11 +2168,17 @@ async function writePreparedFund(outputDir: string, fund: TemaFund, prepared: Pr
   return prepared.meta;
 }
 
+/** The workflow times out at 30 min: stop taking new funds after 25 min and still write the index. */
+export const SOFT_DEADLINE_MS = 25 * 60_000;
+
 /** Run one full or bounded refresh. All provider calls are injected behind paced clients. */
 export async function runUpdater(
   config: UpdaterConfig = readUpdaterConfig(),
   clients: ReturnType<typeof createProviderHttpClients> = createProviderHttpClients(config),
+  options: { deadlineMs?: number; now?: () => number } = {},
 ): Promise<UpdaterRunSummary> {
+  const now = options.now ?? Date.now;
+  const deadlineAt = now() + (options.deadlineMs ?? SOFT_DEADLINE_MS);
   outputPrintConfig('Tema ETFs', config);
   console.log('');
 
@@ -2197,6 +2204,15 @@ export async function runUpdater(
   }
   const catalog = retainCatalogEntries(liveCatalog, previousFundValues);
   console.log(`[ catalog  ] ${catalog.length} Tema ETFs (${catalogSource}${liveCatalog.length < catalog.length ? ' + retained previous entries' : ''})`);
+
+  const unknownTickers = config.tickers.filter(ticker => !catalog.some(fund => fund.ticker.toUpperCase() === ticker));
+  if (unknownTickers.length) throw new Error(`Unknown TICKERS (not in the Tema catalog): ${unknownTickers.join(', ')}`);
+  const newFunds = previousByTicker.size ? liveCatalog.filter(fund => !previousByTicker.has(fund.ticker)).map(fund => fund.ticker) : [];
+  if (newFunds.length && catalogSource === 'temaetfs.com/funds') {
+    const line = `NEW FUNDS: ${newFunds.join(', ')}`;
+    console.log(`[ catalog  ] ${line}`);
+    if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `${line}\n`).catch(() => undefined);
+  }
 
   const staticCandidates = catalog.filter(fund => passesStaticFundFilters(fund, 'Equity', config));
   outputPrintFilter(staticCandidates.length, catalog.length, hasDataDependentFilters(config));
@@ -2227,6 +2243,8 @@ export async function runUpdater(
   let updatedCount = 0;
   let skippedCount = 0;
   let failures = 0;
+  let deadlineNoted = false;
+  let startedCount = 0;
 
   async function prepareFund(fund: TemaFund): Promise<PreparedFund> {
     const previousMeta = recordOf(await readJsonFile(join(config.outputDir, 'funds', fund.ticker, 'meta.json')));
@@ -2347,8 +2365,16 @@ export async function runUpdater(
 
   async function worker(): Promise<void> {
     for (;;) {
+      if (now() >= deadlineAt && queue.length) {
+        if (!deadlineNoted) console.log(`[ deadline ] soft run deadline reached; ${queue.length} funds not started keep their published state`);
+        deadlineNoted = true;
+        skippedCount += queue.length;
+        queue.length = 0;
+        return;
+      }
       const item = queue.shift();
       if (!item) return;
+      startedCount += 1;
       const fund = item.fund;
       const before = await output.before(fund.ticker);
       try {
@@ -2380,20 +2406,33 @@ export async function runUpdater(
 
   await Promise.all(Array.from({ length: Math.min(Math.max(1, config.concurrency), Math.max(1, queue.length)) }, () => worker()));
 
-  const indexFunds = catalog.map(fund => {
+  const metaExists = async (ticker: string): Promise<boolean> => (await readJsonFile(join(config.outputDir, 'funds', ticker, 'meta.json'))) !== null;
+  const indexFunds: Array<Record<string, unknown>> = [];
+  for (const fund of catalog) {
     const fresh = updated.get(fund.ticker);
-    if (fresh) return fresh;
-    return minimalIndexFund(fund, previousByTicker.get(fund.ticker));
-  }).sort((a, b) => String(a.ticker).localeCompare(String(b.ticker)));
+    const row = fresh ?? minimalIndexFund(fund, previousByTicker.get(fund.ticker));
+    indexFunds.push({ ...row, dataFile: (await metaExists(fund.ticker)) ? `./funds/${fund.ticker}/meta.json` : null });
+  }
+  // a fund that has funds/<T>/meta.json is always listed, even when it dropped out of the catalog and the previous index
+  const listed = new Set(indexFunds.map(row => String(row.ticker)));
+  for (const entry of await readdir(join(config.outputDir, 'funds'), { withFileTypes: true }).catch(() => [])) {
+    const ticker = entry.name.toUpperCase();
+    if (!entry.isDirectory() || listed.has(ticker) || !/^[A-Z0-9]{2,5}$/.test(ticker)) continue;
+    const meta = await readJsonFile(join(config.outputDir, 'funds', entry.name, 'meta.json'));
+    if (meta === null) continue;
+    const fund = { ticker, name: String(recordOf(meta).name || ticker), fundPage: `https://temaetfs.com/${ticker.toLowerCase()}` };
+    indexFunds.push(candidateIndexRow(fund, recordOf(meta), previousByTicker.get(ticker)));
+  }
+  indexFunds.sort((a, b) => String(a.ticker).localeCompare(String(b.ticker)));
   const generatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
   const index = buildIndexDocument(indexFunds, generatedAt, generatedAt);
   await writeJsonIfChanged(indexPath, index);
 
-  if (config.maxFetches > 0 && !config.tickers.length && selected.length) {
-    const lastTicker = selected[selected.length - 1].ticker;
+  if (config.maxFetches > 0 && !config.tickers.length && startedCount > 0) {
+    const lastTicker = selected[startedCount - 1].ticker;
     await writeJsonIfChanged(statePath, { cursor: lastTicker });
-    console.log(`[ cursor   ] batch of ${selected.length} reached — next run continues after ${lastTicker}`);
-  } else if (config.maxFetches === 0) {
+    console.log(`[ cursor   ] batch of ${selected.length} reached - next run continues after ${lastTicker}`);
+  } else if (config.maxFetches === 0 && !config.tickers.length) {
     await removeFileIfExists(statePath);
   }
 
@@ -2415,6 +2454,11 @@ export async function runUpdater(
   return summary;
 }
 
+/** True when something was selected and every selected fund failed (the CLI then exits non-zero). */
+export function allFundsFailed(summary: UpdaterRunSummary): boolean {
+  return summary.selectedCount > 0 && summary.failures >= summary.selectedCount;
+}
+
 export async function main(args: string[] = process.argv.slice(2)): Promise<void> {
   const unknown = args.filter(arg => arg !== '--help' && arg !== '-h');
   if (unknown.length) throw new Error(`Unknown argument${unknown.length > 1 ? 's' : ''}: ${unknown.join(' ')}`);
@@ -2425,7 +2469,11 @@ export async function main(args: string[] = process.argv.slice(2)): Promise<void
   const controls = await runtimeControls();
   installSystemCa(controls.USE_SYSTEM_CA ?? 'auto');
   if (controls.VERBOSE !== undefined) process.env.VERBOSE = controls.VERBOSE;
-  await runUpdater(readUpdaterConfig(controls));
+  const summary = await runUpdater(readUpdaterConfig(controls));
+  if (allFundsFailed(summary)) {
+    console.error('[ error    ] every selected fund failed');
+    process.exitCode = 1;
+  }
 }
 
 if (import.meta.main) {
