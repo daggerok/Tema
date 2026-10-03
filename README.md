@@ -34,7 +34,7 @@ The scheduled/manual **Update Tema ETFs data** GitHub Actions workflow exposes 2
 | Catalog (all 14 current Tema ETFs) | [`https://temaetfs.com/funds`](https://temaetfs.com/funds) (the official fund list) |
 | Fund-page metadata | Official fund pages at `https://temaetfs.com/{ticker}`; the updater reads their published fund details and dated `Download Holdings (CSV)` links. |
 | Daily holdings | The date-stamped CSV linked from each official fund page and hosted on Tema's HubSpot site; the updater discovers the current link from the page rather than hardcoding its changing date/cache-buster. |
-| Holdings fallback | SEC EDGAR Form N-PORT-P for Tema ETF Trust (CIK `0001944285`), used only when official holdings/page data is unavailable. |
+| Holdings fallback | SEC EDGAR Form N-PORT-P for Tema ETF Trust (CIK `0001944285`), used only when official holdings are unavailable AND the filing is strictly newer than the published holdings/NAV date and belongs to the trust; an older quarterly snapshot never replaces fresher data. |
 | Price history and distributions | Yahoo Finance chart API (`https://query1.finance.yahoo.com/v8/finance/chart/{TICKER}`); adjusted close is used for date-labelled price history and total-return estimates. |
 
 ### Metrics and caveats
@@ -54,7 +54,13 @@ Each fund carries a `metrics` object that powers the catalog columns shared with
 - `returnsBasis` - mandatory non-empty text saying how the returns are computed: here always Yahoo Finance adjusted close at the last completed month-end (an estimate, not official Tema NAV total returns)
 - `performanceAsOf` - mandatory ISO `YYYY-MM-DD` date the returns are as of: the Yahoo close date of that month-end anchor (not the NAV date), `null` only when no price history exists
 
-Unavailable return values stay `null`, never `0` (young funds have no 1-year or longer figures).
+Unavailable return values stay `null`, never `0` (young funds have no 1-year or longer figures). `siAnn` needs at least one year of history. `dividendYieldText` and `secYieldText` carry the display text (`—` when unavailable).
+
+Expense ratio mapping: Tema publishes one `Total Expense Ratio` and no waiver split, so `terValue` (and `expenseRatio.net`) is that number and `terGrossValue` / `expenseRatio.gross` stay `null` rather than a copy. ARMY, CANC and HRTS pages do not publish the field at all, so their TER is `null`.
+
+Consistency and retention: a fund is either fully updated or fully kept. When the fund page, the holdings (official CSV or a newer N-PORT) or, unless `SKIP_YAHOO=true`, the Yahoo history fails and the fund already has published data, the run logs it as `skipped` and keeps the previous files untouched; no new NAV is ever published next to stale returns. A source that answers with an honest empty value (for example a page that stopped listing the TER, or a shorter `HISTORY_RANGE` with no 3-year return) produces `null`, never the old value. `SKIP_YAHOO=true` keeps returns, yields, distributions and history together with their `performanceAsOf`. A fund with no published data yet is written with whatever sources answered. Writes are atomic (temp file + rename): pages first, then `meta.json`, then stale pages are removed, and `index.json` last. The run stops taking new funds after 25 minutes and still writes the index. New catalog funds are printed as `NEW FUNDS: A, B` and appended to `$GITHUB_STEP_SUMMARY`. Every request has a 45-second timeout (headers and body) and is retried per `MAX_RETRIES`.
+
+`index.json` rows of funds without `funds/<TICKER>/meta.json` carry `dataFile: null` and a full `metrics` object with `null` values.
 
 ### Update controls
 
@@ -75,16 +81,15 @@ Unavailable return values stay `null`, never `0` (young funds have no 1-year or 
 | `HOLDINGS_PAGE_SIZE` | `250` | Rows in each generated current-holdings JSON page. |
 | `HISTORY_PAGE_SIZE` | `1000` | Rows in each generated history JSON page. |
 | `HISTORY_RANGE` | `max` | Maximum history or a bounded window such as `10y`. |
-| `OUTPUT_DIR` | `api/tema` | Static API output directory; the workflow stages only `api/tema`. |
 | `EDGAR_FALLBACK` | `true` | Use SEC N-PORT-P holdings when Tema CSV/page holdings are unavailable. |
 | `SKIP_YAHOO` | `false` | When true, skip Yahoo history updates and retain previously published history. |
 | `SEC_UA` | `daggerok ETF feed daggerok@gmail.com` | SEC User-Agent with a contact address; redacted in config logs. The protected repository Actions variable `SEC_UA` overrides it in the workflow. |
 | `VERBOSE` | `false` | Show per-request/per-fund retry and fallback notices. |
 | `USE_SYSTEM_CA` | `auto` | TLS trust store: `auto` restarts the updater once with Bun's `--use-system-ca` when a request fails with an untrusted-certificate error; `true` always uses the system CA store; `false` never restarts. Not an individual workflow input: use `advanced`, the config file or the CLI environment. |
 
-Range syntax is inclusive `MIN:MAX`; either side may be empty, and `:` disables that filter. `TICKERS`, `CATEGORY`, AUM, TER, yield and return filters combine with **AND** logic. Funds not selected for a successful update retain their prior published metadata and data files.
+Range syntax is inclusive `MIN:MAX`; either side may be empty, and `:` disables that filter. `TICKERS`, `CATEGORY`, AUM, TER, yield and return filters combine with **AND** logic. Funds not selected for a successful update retain their prior published metadata and data files, and `index.json` always lists every fund that has a `meta.json`. A `TICKERS` entry that is not in the catalog is an error, and a `TICKERS` run never touches the `MAX_FETCHES` cursor state. The CLI exits non-zero when every selected fund failed.
 
-The workflow inputs are the lowercase names of the controls above (for example `max_fetches`, `performance_1y`); only `SEC_YIELD`, `OUTPUT_DIR`, `SEC_UA`, `VERBOSE` and `USE_SYSTEM_CA` have no individual input. The `SEC_YIELD` bound can be set through `advanced`.
+The output directory is fixed at `api/tema` (not a control, never an input). The workflow inputs are the lowercase names of the controls above (for example `max_fetches`, `performance_1y`); only `SEC_YIELD`, `SEC_UA`, `VERBOSE` and `USE_SYSTEM_CA` have no individual input. The `SEC_YIELD` bound can be set through `advanced`.
 
 ### Examples
 

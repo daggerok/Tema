@@ -1,7 +1,7 @@
 /// <reference types="bun" />
 
 import { readFileSync } from 'node:fs';
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, test } from 'bun:test';
@@ -21,11 +21,15 @@ import {
   isoFromDateLabel,
   RETURNS_BASIS,
   withReturnsContract,
-  mergePublishedFallback,
+  allFundsFailed,
+  carryPreviousSections,
+  nportBelongsToTema,
+  nportIsNewerThanPublished,
   yahooDistributionRows,
   yahooHistoryRows,
   createNportResolver,
   createPacedHttpClient,
+  createProviderHttpClients,
   filterFundFromIndex,
   hasDataDependentFilters,
   main,
@@ -35,6 +39,7 @@ import {
   printHelp,
   updaterHelpText,
   createRequestGate,
+  SOFT_DEADLINE_MS,
   isRetryableHttpStatus,
   decodeTemaCsv,
   deriveTemaMetrics,
@@ -313,8 +318,7 @@ describe('Tema updater configuration and filters', () => {
       HISTORY_PAGE_SIZE: '365',
       HISTORY_RANGE: '5y',
       SEC_UA: 'Tema test contact@example.com',
-      OUTPUT_DIR: 'isolated/api/tema',
-    });
+    }, 'isolated/api/tema');
     expect(config).toMatchObject({
       maxFetches: 5,
       requestSleepSeconds: 0.25,
@@ -491,8 +495,8 @@ describe('Tema source encodings and Yahoo chart normalization', () => {
     expect(parsed.exchangeName).toBe('Nasdaq');
     expect(parsed.currency).toBe('USD');
     expect(parsed.days).toEqual([
-      { date: '2026-09-26', close: 10.123457, adjClose: 10.12, volume: 100 },
-      { date: '2026-09-29', close: 12.345678, adjClose: 12.35, volume: 300 },
+      { date: '2026-09-26', close: 10.123457, adjClose: 10.124, volume: 100 },
+      { date: '2026-09-29', close: 12.345678, adjClose: 12.349, volume: 300 },
     ]);
     expect(parsed.dividends).toEqual([{ date: '2026-09-01', amount: 0.125 }]);
     expect(() => parseYahooChart({ chart: { result: [] } })).toThrow('empty result');
@@ -639,9 +643,11 @@ describe('Tema catalog cursor and index builders', () => {
 
   test('builds a usable blank catalog row and preserves previous published metrics', () => {
     const blank = minimalIndexFund({ ticker: 'VOLT', name: 'VOLT Electrification ETF', fundPage: 'https://temaetfs.com/volt' });
-    expect(blank).toMatchObject({ ticker: 'VOLT', category: 'Equity', dataFile: './funds/VOLT/meta.json', terValue: null, navValue: null, holdings: 0, history: 0 });
+    expect(blank).toMatchObject({ ticker: 'VOLT', category: 'Equity', dataFile: null, terGrossValue: null, terValue: null, navValue: null, holdings: 0, history: 0 });
     const previous = minimalIndexFund({ ticker: 'VOLT', name: 'VOLT Electrification ETF', fundPage: 'https://temaetfs.com/volt' }, { metrics: { ytd: 12 }, holdings: 27, category: 'U.S. Equity' });
-    expect(previous).toMatchObject({ category: 'U.S. Equity', metrics: { ytd: 12 }, holdings: 27, history: 0 });
+    expect(previous).toMatchObject({ category: 'U.S. Equity', metrics: { ytd: 12 }, holdings: 27, history: 0, dataFile: null });
+    expect(minimalIndexFund({ ticker: 'VOLT', name: 'VOLT', fundPage: 'https://temaetfs.com/volt' }, { dataFile: './funds/VOLT/meta.json' }).dataFile).toBe('./funds/VOLT/meta.json');
+    expect(Object.keys(recordOfTest(blank.metrics))).toEqual(['ytd', 'tr1y', 'tr3y', 'tr5y', 'tr10y', 'cagr3y', 'cagr5y', 'cagr10y', 'siAnn', 'dividendYield', 'dividendYieldText', 'secYield', 'secYieldText', 'returnsBasis', 'performanceAsOf']);
   });
 
   test('counts every retained fund and aggregates its existing data in index.json', () => {
@@ -724,6 +730,72 @@ describe('paced HTTP client', () => {
   test('does not echo query values when reporting an unsuccessful response', async () => {
     const client = createPacedHttpClient({ gate: { pace: async () => undefined }, retries: 0, userAgent: 'test', fetchImpl: async () => new Response('denied', { status: 403 }) });
     await expect(responseText(client, 'https://example.test/private?token=must-not-leak')).rejects.toThrow('HTTP 403 for example.test/private');
+  });
+});
+
+describe('request timeout and real concurrency', () => {
+  test('a request that never answers times out per attempt, is retried, then fails without echoing the query', async () => {
+    let attempts = 0;
+    const client = createPacedHttpClient({
+      gate: { pace: async () => undefined },
+      retries: 1,
+      userAgent: 'test',
+      timeoutMs: 20,
+      sleep: async () => undefined,
+      fetchImpl: (() => { attempts += 1; return new Promise<Response>(() => undefined); }) as unknown as typeof fetch,
+    });
+    const started = Date.now();
+    await expect(responseText(client, 'https://example.test/slow?token=secret')).rejects.toThrow(/timed out after 0s for example\.test\/slow$/);
+    expect(attempts).toBe(2);
+    expect(Date.now() - started).toBeLessThan(2000);
+  });
+
+  test('a body that stalls after the headers is covered by the same timeout and a later attempt can succeed', async () => {
+    let attempts = 0;
+    const client = createPacedHttpClient({
+      gate: { pace: async () => undefined },
+      retries: 1,
+      userAgent: 'test',
+      timeoutMs: 30,
+      sleep: async () => undefined,
+      fetchImpl: (async () => {
+        attempts += 1;
+        if (attempts === 1) return new Response(new ReadableStream({ start() { /* never enqueues, never closes */ } }), { status: 200 });
+        return new Response('complete body', { status: 200 });
+      }) as unknown as typeof fetch,
+    });
+    expect(await responseText(client, 'https://example.test/stall')).toBe('complete body');
+    expect(attempts).toBe(2);
+  });
+
+  test('CONCURRENCY=1 never has two requests in flight, CONCURRENCY=3 reaches three (offline in-flight counter)', async () => {
+    const tickers = ['AAA', 'BBB', 'CCC'];
+    const run = async (concurrency: number): Promise<number> => {
+      let inFlight = 0;
+      let peak = 0;
+      const base = issuerFor(tickers);
+      const chart = JSON.stringify(dailyChart('2026-09-01', 29));
+      const counting = (async (input: string | URL) => {
+        inFlight += 1;
+        peak = Math.max(peak, inFlight);
+        try {
+          await new Promise(resolveWait => setTimeout(resolveWait, 25));
+          const url = String(input);
+          if (url.includes('finance/chart')) return okResponse(chart, 'application/json');
+          return await base.fetch(input);
+        } finally {
+          inFlight -= 1;
+        }
+      }) as unknown as typeof fetch;
+      await withQuietFeed(async directory => {
+        const config = safetyEnv(directory, { CONCURRENCY: String(concurrency), EDGAR_FALLBACK: 'false' });
+        const summary = await runUpdater(config, createProviderHttpClients(config, counting));
+        expect(summary).toMatchObject({ updatedCount: 3, failures: 0 });
+      });
+      return peak;
+    };
+    expect(await run(1)).toBe(1);
+    expect(await run(3)).toBe(3);
   });
 });
 
@@ -827,7 +899,7 @@ describe('Tema metadata and index projection', () => {
     });
     expect(meta).toMatchObject({ ticker: 'VOLT', name: 'VOLT Electrification ETF', category: 'Equity' });
     expect(meta.source).toMatchObject({ yahooChart: 'https://query1.finance.yahoo.com/v8/finance/chart/VOLT', holdingsDownload: 'https://temaetfs.com/hubfs/holdings.csv' });
-    expect(meta.expenseRatio).toMatchObject({ display: '0.75%', value: 0.75, gross: 0.75, net: null });
+    expect(meta.expenseRatio).toMatchObject({ display: '0.75%', value: 0.75, gross: null, net: 0.75 });
     expect(meta.holdings).toMatchObject({ totalRows: 27, pages: ['holdings/001.json'] });
     expect(meta.distributions).toMatchObject({ frequency: 'Unknown', paymentsPerYear: null, rows: [['07/01/2026', '0.2'], ['09/01/2026', '0.25']] });
     expect(meta.yields).toMatchObject({ secYield: null, dividendYield: 1.26 });
@@ -841,11 +913,10 @@ describe('Tema metadata and index projection', () => {
     expect(formatTemaPercent(-1)).toBe('-1.00%');
   });
 
-  test('fills unavailable refreshed fields from the published version without replacing real zero or explicit Unknown', () => {
-    expect(mergePublishedFallback(
-      { metric: null, zero: 0, frequency: 'Unknown', rows: [], child: { value: '—' } },
-      { metric: 3.5, zero: 9, frequency: 'Quarterly', rows: [1], child: { value: 'kept', old: true } },
-    )).toEqual({ metric: 3.5, zero: 0, frequency: 'Unknown', rows: [1], child: { value: 'kept', old: true } });
+  test('carryPreviousSections copies only the named sections and never touches honest nulls elsewhere', () => {
+    const meta: Record<string, unknown> = { returns: { tr3y: null }, yields: { dividendYield: null }, nav: { value: null } };
+    carryPreviousSections(meta, { returns: { tr3y: 9 }, yields: { dividendYield: 1 }, nav: { value: 3 } }, ['returns', 'yields', 'missing']);
+    expect(meta).toEqual({ returns: { tr3y: 9 }, yields: { dividendYield: 1 }, nav: { value: null } });
   });
 });
 
@@ -871,7 +942,7 @@ describe('Tema CLI help and console contracts', () => {
 
   test('documents every supported environment control and performs no network work for help', () => {
     const help = updaterHelpText();
-    for (const item of ['MAX_FETCHES', 'REQUEST_SLEEP', 'CONCURRENCY', 'MAX_RETRIES', 'TICKERS', 'CATEGORY', 'AUM', 'TER', 'DIVIDEND_YIELD', 'SEC_YIELD', 'PERFORMANCE_', 'TOTAL_RETURN_', 'HOLDINGS_PAGE_SIZE', 'HISTORY_PAGE_SIZE', 'HISTORY_RANGE', 'OUTPUT_DIR', 'EDGAR_FALLBACK', 'SKIP_YAHOO', 'SEC_UA', 'VERBOSE', 'USE_SYSTEM_CA']) expect(help).toContain(item);
+    for (const item of ['MAX_FETCHES', 'REQUEST_SLEEP', 'CONCURRENCY', 'MAX_RETRIES', 'TICKERS', 'CATEGORY', 'AUM', 'TER', 'DIVIDEND_YIELD', 'SEC_YIELD', 'PERFORMANCE_', 'TOTAL_RETURN_', 'HOLDINGS_PAGE_SIZE', 'HISTORY_PAGE_SIZE', 'HISTORY_RANGE', 'EDGAR_FALLBACK', 'SKIP_YAHOO', 'SEC_UA', 'VERBOSE', 'USE_SYSTEM_CA']) expect(help).toContain(item);
     const log = console.log;
     const lines: string[] = [];
     console.log = (...values: unknown[]) => { lines.push(values.map(String).join(' ')); };
@@ -914,7 +985,7 @@ describe('Tema updater orchestration with offline provider fixtures', () => {
       yahoo: { fetch: async () => ok(JSON.stringify(chartPayload), 'application/json') },
       sec: { fetch: async () => { secRequests += 1; return new Response('unexpected SEC request', { status: 403 }); } },
     };
-    const config = readUpdaterConfig({ OUTPUT_DIR: directory, TICKERS: 'VOLT', REQUEST_SLEEP: '0', MAX_RETRIES: '1' });
+    const config = readUpdaterConfig({ TICKERS: 'VOLT', REQUEST_SLEEP: '0', MAX_RETRIES: '1' }, directory);
     const log = console.log;
     console.log = () => undefined;
     const snapshot = async (): Promise<string> => {
@@ -952,7 +1023,7 @@ describe('Tema updater orchestration with offline provider fixtures', () => {
         yahoo: { fetch: async () => new Response('unavailable', { status: 503 }) },
         sec: { fetch: async () => new Response('disabled', { status: 403 }) },
       };
-      const retentionConfig = readUpdaterConfig({ OUTPUT_DIR: directory, TICKERS: 'VOLT', REQUEST_SLEEP: '0', MAX_RETRIES: '1', EDGAR_FALLBACK: 'false' });
+      const retentionConfig = readUpdaterConfig({ TICKERS: 'VOLT', REQUEST_SLEEP: '0', MAX_RETRIES: '1', EDGAR_FALLBACK: 'false' }, directory);
       const retained = await runUpdater(retentionConfig, failingClients);
       expect(retained).toMatchObject({ selectedCount: 1, updatedCount: 0, skippedCount: 1, failures: 0, holdings: 3, history: 2 });
       expect(await snapshot()).toBe(firstSnapshot);
@@ -995,7 +1066,7 @@ describe('Tema bounded updater cursor', () => {
       yahoo: { fetch: async () => new Response('disabled', { status: 403 }) },
       sec: { fetch: async () => new Response('disabled', { status: 403 }) },
     };
-    const config = readUpdaterConfig({ OUTPUT_DIR: directory, MAX_FETCHES: '1', REQUEST_SLEEP: '0', CONCURRENCY: '1', MAX_RETRIES: '1', EDGAR_FALLBACK: 'false', SKIP_YAHOO: 'true' });
+    const config = readUpdaterConfig({ MAX_FETCHES: '1', REQUEST_SLEEP: '0', CONCURRENCY: '1', MAX_RETRIES: '1', EDGAR_FALLBACK: 'false', SKIP_YAHOO: 'true' }, directory);
     const log = console.log;
     console.log = () => undefined;
     try {
@@ -1117,7 +1188,7 @@ describe('README and workflow shape', () => {
     expect(wf).toContain("cron: '0 0 * * 0'");
     expect(wf).toContain('toJSON(inputs)');
     expect(wf).not.toMatch(/\$\{\{\s*(inputs|github\.event\.inputs)\./);
-    expect(configFile.OUTPUT_DIR).toBe('api/tema');
+    expect('OUTPUT_DIR' in configFile).toBe(false);
     expect(wf).toContain('git add api/tema\n');
     expect(wf).not.toMatch(/git add (?!api\/tema\b)/);
     expect(wf).toContain('PROTECTED_SEC_UA: ${{ vars.SEC_UA }}');
@@ -1178,5 +1249,348 @@ describe('system CA support', () => {
     installSystemCa('auto', reexec, false);
     expect(await (await globalThis.fetch('https://example.invalid')).text()).toBe('ok');
     expect(calls).toBe(1);
+  });
+});
+
+// --- offline multi-fund harness shared by the data-safety tests below ---
+const TEST_DAY = 86_400;
+const isoEpoch = (date: string) => Date.parse(`${date}T00:00:00Z`) / 1000;
+const okResponse = (body: string, contentType = 'text/html') => new Response(body, { status: 200, headers: { 'content-type': contentType } });
+const csvUrlFor = (ticker: string) => `https://temaetfs.com/hubfs/Website/Holdings/${ticker}-holdings-09292026.csv`;
+
+function dailyChart(startIso: string, days: number, extra: { dividends?: Record<string, { date: number; amount: number }> } = {}) {
+  const timestamp = Array.from({ length: days }, (_unused, index) => isoEpoch(startIso) + index * TEST_DAY);
+  const close = timestamp.map((_value, index) => 20 + index * 0.01);
+  return { chart: { result: [{
+    meta: { longName: 'Test ETF', exchangeName: 'Nasdaq', currency: 'USD', regularMarketPrice: close.at(-1) },
+    timestamp,
+    indicators: { quote: [{ close }], adjclose: [{ adjclose: close }] },
+    events: { dividends: extra.dividends ?? {} },
+  }] } };
+}
+
+function temaPage(ticker: string, options: { ter?: string | null; asOf?: string } = {}): string {
+  let html = fundPageFixture.replace(/VOLT/g, ticker).replace('September 29, 2026', options.asOf ?? 'September 29, 2026');
+  if (options.ter === null) html = html.replace(/<div class="box"><div class="col-specification"><span>Total Expense Ratio<\/span><\/div><div class="col-details">0\.75%<\/div><\/div>\n/, '');
+  return `${html}<a href="${csvUrlFor(ticker)}">Download Holdings (CSV)</a>`;
+}
+
+function nportClient(reportDate: string, counter?: { requests: number }) {
+  const xml = `<edgarSubmission><genInfo><regName>Tema ETF Trust</regName><regCik>0001944285</regCik><seriesName>Tema Electrification ETF</seriesName><seriesId>S000001</seriesId><repPdDate>${reportDate}</repPdDate></genInfo><formData><fundInfo><netAssets>1000.5</netAssets></fundInfo><invstOrSec><name>OLD CO</name><cusip>111111111</cusip><valUSD>10</valUSD><pctVal>5</pctVal><balance>3</balance><assetCat>EC</assetCat></invstOrSec></formData></edgarSubmission>`;
+  return { fetch: async (input: string | URL) => {
+    if (counter) counter.requests += 1;
+    const url = String(input);
+    if (url.includes('company_tickers_mf')) return okResponse(JSON.stringify({ fields: ['cik', 'seriesId', 'classId', 'symbol'], data: [[1944285, 'S000001', 'C000001', 'VOLT']] }), 'application/json');
+    if (url.includes('submissions')) return okResponse(JSON.stringify({ cik: '1944285', filings: { recent: { form: ['NPORT-P'], accessionNumber: ['0001-26-000001'], filingDate: ['2026-07-30'], reportDate: [reportDate] } } }), 'application/json');
+    if (url.includes('primary_doc')) return okResponse(xml, 'text/xml');
+    if (url.includes('company_tickers')) return okResponse('{}', 'application/json');
+    return new Response('not found', { status: 404 });
+  } };
+}
+
+function issuerFor(tickers: string[], options: { ter?: string | null; down?: boolean } = {}) {
+  const catalog = tickers.map(ticker => `<a href="https://temaetfs.com/${ticker.toLowerCase()}">${ticker} Tema ETF</a>`).join('');
+  return { fetch: async (input: string | URL) => {
+    const url = String(input);
+    if (url === 'https://temaetfs.com/funds') return okResponse(catalog);
+    if (options.down) return new Response('unavailable', { status: 503 });
+    const ticker = tickers.find(item => url === `https://temaetfs.com/${item.toLowerCase()}`);
+    if (ticker) return okResponse(temaPage(ticker, { ter: options.ter }));
+    if (url.startsWith('https://temaetfs.com/hubfs/')) return okResponse(holdingsFixture, 'text/csv');
+    return new Response('not found', { status: 404 });
+  } };
+}
+
+const yahooFor = (payload: unknown) => ({ fetch: async () => okResponse(JSON.stringify(payload), 'application/json') });
+const downClient = { fetch: async () => new Response('unavailable', { status: 503 }) };
+
+async function treeSnapshot(directory: string): Promise<string> {
+  const files: Array<[string, string]> = [];
+  async function visit(path: string): Promise<void> {
+    for (const entry of (await readdir(path, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
+      const child = join(path, entry.name);
+      if (entry.isDirectory()) await visit(child);
+      else files.push([child.slice(directory.length + 1), await readFile(child, 'utf8')]);
+    }
+  }
+  await visit(directory);
+  return JSON.stringify(files);
+}
+
+async function withQuietFeed<T>(run: (directory: string) => Promise<T>): Promise<T> {
+  const directory = await mkdtemp(join(tmpdir(), 'tema-safety-test-'));
+  const log = console.log;
+  console.log = () => undefined;
+  try {
+    return await run(directory);
+  } finally {
+    console.log = log;
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
+const safetyEnv = (directory: string, extra: Record<string, string> = {}) => readUpdaterConfig({ REQUEST_SLEEP: '0', MAX_RETRIES: '1', CONCURRENCY: '2', ...extra }, directory);
+
+describe('fallback freshness and retention (published data is never replaced by older or partial data)', () => {
+  test('nportIsNewerThanPublished compares ISO dates and date labels, and ignores unusable report dates', () => {
+    expect(nportIsNewerThanPublished('2026-05-31', '2026-09-30')).toBe(false);
+    expect(nportIsNewerThanPublished('2026-09-30', 'Sep 30 2026')).toBe(false);
+    expect(nportIsNewerThanPublished('2026-12-31', 'Sep 30 2026', '', undefined)).toBe(true);
+    expect(nportIsNewerThanPublished('2026-05-31')).toBe(true);
+    expect(nportIsNewerThanPublished('not a date', '2020-01-01')).toBe(false);
+    expect(nportBelongsToTema({ regCik: '0001944285' })).toBe(true);
+    expect(nportBelongsToTema({ regCik: '' })).toBe(true);
+    expect(nportBelongsToTema({ regCik: '0000000123' })).toBe(false);
+  });
+
+  test('EDGAR_FALLBACK=true with the issuer down keeps the published holdings and AUM instead of reverting to an old N-PORT', async () => {
+    await withQuietFeed(async directory => {
+      const healthy = { issuer: issuerFor(['VOLT']), yahoo: yahooFor(dailyChart('2026-09-01', 29)), sec: downClient };
+      await runUpdater(safetyEnv(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'true' }), healthy);
+      const published = await treeSnapshot(directory);
+      const secCounter = { requests: 0 };
+      const outage = { issuer: issuerFor(['VOLT'], { down: true }), yahoo: downClient, sec: nportClient('2026-05-31', secCounter) };
+      const summary = await runUpdater(safetyEnv(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'true' }), outage);
+      expect(summary).toMatchObject({ updatedCount: 0, skippedCount: 1, failures: 0 });
+      expect(await treeSnapshot(directory)).toBe(published);
+      const meta = JSON.parse(await readFile(join(directory, 'funds', 'VOLT', 'meta.json'), 'utf8'));
+      expect(meta.holdings.asOfDate).toBe('2026-09-29');
+      expect(meta.aum.value).toBe(734149760);
+      // the official page is up but its CSV is gone: an older N-PORT still must not replace the published holdings
+      const csvGone = { fetch: async (input: string | URL) => String(input).startsWith('https://temaetfs.com/hubfs/') ? new Response('gone', { status: 404 }) : issuerFor(['VOLT']).fetch(input) };
+      const second = await runUpdater(safetyEnv(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'true' }), { issuer: csvGone, yahoo: yahooFor(dailyChart('2026-09-01', 29)), sec: nportClient('2026-05-31') });
+      expect(second).toMatchObject({ updatedCount: 0, skippedCount: 1 });
+      expect(await treeSnapshot(directory)).toBe(published);
+    });
+  });
+
+  test('a newer N-PORT is accepted for a fund without published data, with the series verified', async () => {
+    await withQuietFeed(async directory => {
+      const outage = { issuer: issuerFor(['VOLT'], { down: true }), yahoo: downClient, sec: nportClient('2026-05-31') };
+      const first = await runUpdater(safetyEnv(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'true' }), outage);
+      expect(first).toMatchObject({ updatedCount: 1, failures: 0 });
+      const meta = JSON.parse(await readFile(join(directory, 'funds', 'VOLT', 'meta.json'), 'utf8'));
+      expect(meta.holdings.source).toContain('N-PORT');
+      expect(meta.holdings.totalRows).toBe(1);
+    });
+  });
+
+  test('HISTORY_RANGE=1y drops long-horizon returns instead of keeping old values under the new performanceAsOf', async () => {
+    await withQuietFeed(async directory => {
+      const run = (chart: unknown, env: Record<string, string>) => runUpdater(safetyEnv(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'false', ...env }), { issuer: issuerFor(['VOLT']), yahoo: yahooFor(chart), sec: downClient });
+      await run(dailyChart('2023-01-01', 1370), {});
+      const longRow = JSON.parse(await readFile(join(directory, 'index.json'), 'utf8')).funds[0];
+      expect(longRow.metrics.tr3y).not.toBeNull();
+      await run(dailyChart('2025-10-01', 365), { HISTORY_RANGE: '1y' });
+      const row = JSON.parse(await readFile(join(directory, 'index.json'), 'utf8')).funds[0];
+      expect(row.metrics.tr3y).toBeNull();
+      expect(row.metrics.cagr3y).toBeNull();
+      expect(row.returns.monthEnd.yr3).toBeNull();
+      expect(row.metrics.tr1y).toBeNull();
+      expect(row.metrics.performanceAsOf).toBe(longRow.metrics.performanceAsOf);
+    });
+  });
+
+  test('a TER that the source stops publishing becomes null; it is not kept forever', async () => {
+    await withQuietFeed(async directory => {
+      const chart = dailyChart('2026-09-01', 29);
+      const run = (ter?: null) => runUpdater(safetyEnv(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'false' }), { issuer: issuerFor(['VOLT'], { ter }), yahoo: yahooFor(chart), sec: downClient });
+      await run();
+      expect(JSON.parse(await readFile(join(directory, 'index.json'), 'utf8')).funds[0].terValue).toBe(0.75);
+      await run(null);
+      const row = JSON.parse(await readFile(join(directory, 'index.json'), 'utf8')).funds[0];
+      expect(row.terValue).toBeNull();
+      expect(row.ter).toBe('—');
+    });
+  });
+
+  test('Yahoo down while the page is up keeps the whole fund as it was (no new NAV next to stale returns)', async () => {
+    await withQuietFeed(async directory => {
+      await runUpdater(safetyEnv(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'false' }), { issuer: issuerFor(['VOLT']), yahoo: yahooFor(dailyChart('2026-09-01', 29)), sec: downClient });
+      const published = await treeSnapshot(directory);
+      const moved = { fetch: async (input: string | URL) => { const response = await issuerFor(['VOLT']).fetch(input); const text = await response.text(); return okResponse(text.replace('$35.81', '$99.99')); } };
+      const summary = await runUpdater(safetyEnv(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'false' }), { issuer: moved, yahoo: downClient, sec: downClient });
+      expect(summary).toMatchObject({ updatedCount: 0, skippedCount: 1, failures: 0 });
+      expect(await treeSnapshot(directory)).toBe(published);
+    });
+  });
+
+  test('SKIP_YAHOO carries returns, yields and distributions together with their as-of date', async () => {
+    await withQuietFeed(async directory => {
+      const base = { EDGAR_FALLBACK: 'false', TICKERS: 'VOLT' };
+      await runUpdater(safetyEnv(directory, base), { issuer: issuerFor(['VOLT']), yahoo: yahooFor(dailyChart('2023-01-01', 1370)), sec: downClient });
+      const before = JSON.parse(await readFile(join(directory, 'funds', 'VOLT', 'meta.json'), 'utf8'));
+      await runUpdater(safetyEnv(directory, { ...base, SKIP_YAHOO: 'true' }), { issuer: issuerFor(['VOLT']), yahoo: downClient, sec: downClient });
+      const after = JSON.parse(await readFile(join(directory, 'funds', 'VOLT', 'meta.json'), 'utf8'));
+      expect(after.returns).toEqual(before.returns);
+      expect(after.history).toEqual(before.history);
+    });
+  });
+});
+
+describe('orchestration over a multi-fund catalog', () => {
+  const healthy = (tickers: string[], chart = dailyChart('2026-09-01', 29)) => ({ issuer: issuerFor(tickers), yahoo: yahooFor(chart), sec: downClient });
+  const readIndex = async (directory: string) => JSON.parse(await readFile(join(directory, 'index.json'), 'utf8'));
+
+  test('a one-ticker run keeps every other row and file, a failing run too (index never shrinks)', async () => {
+    await withQuietFeed(async directory => {
+      const tickers = ['AAA', 'BBB', 'CCC'];
+      await runUpdater(safetyEnv(directory, { EDGAR_FALLBACK: 'false' }), healthy(tickers));
+      expect((await readIndex(directory)).funds.map((row: { ticker: string }) => row.ticker)).toEqual(tickers);
+      const others = async () => JSON.stringify([await readFile(join(directory, 'funds', 'BBB', 'meta.json'), 'utf8'), await readFile(join(directory, 'funds', 'CCC', 'meta.json'), 'utf8')]);
+      const before = await others();
+      await runUpdater(safetyEnv(directory, { TICKERS: 'AAA', EDGAR_FALLBACK: 'false' }), healthy(tickers));
+      expect((await readIndex(directory)).funds).toHaveLength(3);
+      await runUpdater(safetyEnv(directory, { TICKERS: 'AAA', EDGAR_FALLBACK: 'false' }), { issuer: issuerFor(tickers, { down: true }), yahoo: downClient, sec: downClient });
+      expect((await readIndex(directory)).funds).toHaveLength(3);
+      expect(await others()).toBe(before);
+    });
+  });
+
+  test('a run twice with identical upstream data writes nothing the second time (zero diff)', async () => {
+    await withQuietFeed(async directory => {
+      const config = safetyEnv(directory, { EDGAR_FALLBACK: 'false' });
+      await runUpdater(config, healthy(['AAA', 'BBB']));
+      const first = await treeSnapshot(directory);
+      await runUpdater(config, healthy(['AAA', 'BBB']));
+      expect(await treeSnapshot(directory)).toBe(first);
+    });
+  });
+
+  test('an unknown TICKERS entry is an error before any request-driven write', async () => {
+    await withQuietFeed(async directory => {
+      await runUpdater(safetyEnv(directory, { EDGAR_FALLBACK: 'false' }), healthy(['AAA']));
+      const before = await treeSnapshot(directory);
+      await expect(runUpdater(safetyEnv(directory, { TICKERS: 'AAA NOPE', EDGAR_FALLBACK: 'false' }), healthy(['AAA']))).rejects.toThrow('Unknown TICKERS (not in the Tema catalog): NOPE');
+      expect(await treeSnapshot(directory)).toBe(before);
+    });
+  });
+
+  test('a fund without funds/<T>/meta.json gets dataFile null and a full metrics object; funds with meta are always listed', async () => {
+    await withQuietFeed(async directory => {
+      await runUpdater(safetyEnv(directory, { TICKERS: 'AAA', EDGAR_FALLBACK: 'false' }), healthy(['AAA', 'BBB']));
+      const funds = (await readIndex(directory)).funds;
+      expect(funds.find((row: { ticker: string }) => row.ticker === 'AAA').dataFile).toBe('./funds/AAA/meta.json');
+      const blank = funds.find((row: { ticker: string }) => row.ticker === 'BBB');
+      expect(blank.dataFile).toBeNull();
+      expect(Object.values(blank.metrics).filter(value => value === null)).toHaveLength(12);
+      expect(blank.metrics.returnsBasis).toBe(RETURNS_BASIS);
+      // drop AAA from the catalog and the previous index: its meta.json still keeps it listed
+      const index = await readIndex(directory);
+      index.funds = index.funds.filter((row: { ticker: string }) => row.ticker !== 'AAA');
+      await writeJsonIfChanged(join(directory, 'index.json'), index);
+      await runUpdater(safetyEnv(directory, { TICKERS: 'BBB', EDGAR_FALLBACK: 'false' }), healthy(['BBB']));
+      expect((await readIndex(directory)).funds.map((row: { ticker: string }) => row.ticker)).toEqual(['AAA', 'BBB']);
+    });
+  });
+
+  test('a TICKERS run neither deletes nor moves the MAX_FETCHES cursor; only a full run clears it', async () => {
+    await withQuietFeed(async directory => {
+      await runUpdater(safetyEnv(directory, { MAX_FETCHES: '1', CONCURRENCY: '1', EDGAR_FALLBACK: 'false' }), healthy(['AAA', 'BBB']));
+      const statePath = join(directory, 'update-state.json');
+      expect(JSON.parse(await readFile(statePath, 'utf8'))).toEqual({ cursor: 'AAA' });
+      await runUpdater(safetyEnv(directory, { TICKERS: 'BBB', EDGAR_FALLBACK: 'false' }), healthy(['AAA', 'BBB']));
+      expect(JSON.parse(await readFile(statePath, 'utf8'))).toEqual({ cursor: 'AAA' });
+      await runUpdater(safetyEnv(directory, { EDGAR_FALLBACK: 'false' }), healthy(['AAA', 'BBB']));
+      expect(await readFile(statePath, 'utf8').catch(() => 'gone')).toBe('gone');
+    });
+  });
+
+  test('the soft deadline stops taking funds but still writes the index with every row', async () => {
+    await withQuietFeed(async directory => {
+      await runUpdater(safetyEnv(directory, { EDGAR_FALLBACK: 'false' }), healthy(['AAA', 'BBB']));
+      const published = await treeSnapshot(directory);
+      const summary = await runUpdater(safetyEnv(directory, { EDGAR_FALLBACK: 'false' }), healthy(['AAA', 'BBB']), { deadlineMs: 0 });
+      expect(summary).toMatchObject({ selectedCount: 2, updatedCount: 0, skippedCount: 2 });
+      expect(await treeSnapshot(directory)).toBe(published);
+      expect(SOFT_DEADLINE_MS).toBe(25 * 60_000);
+    });
+  });
+
+  test('new catalog funds are announced as NEW FUNDS in the log and in GITHUB_STEP_SUMMARY', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'tema-new-test-'));
+    const summaryFile = join(directory, 'summary.md');
+    const output = join(directory, 'feed');
+    const lines: string[] = [];
+    const log = console.log;
+    const previousSummary = process.env.GITHUB_STEP_SUMMARY;
+    console.log = (...values: unknown[]) => { lines.push(values.map(String).join(' ')); };
+    process.env.GITHUB_STEP_SUMMARY = summaryFile;
+    try {
+      const config = safetyEnv(output, { EDGAR_FALLBACK: 'false', SKIP_YAHOO: 'true' });
+      await runUpdater(config, { issuer: issuerFor(['AAA']), yahoo: downClient, sec: downClient });
+      expect(lines.some(line => line.includes('NEW FUNDS'))).toBe(false);
+      await runUpdater(config, { issuer: issuerFor(['AAA', 'BBB', 'CCC']), yahoo: downClient, sec: downClient });
+      expect(lines.some(line => line.includes('NEW FUNDS: BBB, CCC'))).toBe(true);
+      expect(await readFile(summaryFile, 'utf8')).toBe('NEW FUNDS: BBB, CCC\n');
+    } finally {
+      console.log = log;
+      if (previousSummary === undefined) delete process.env.GITHUB_STEP_SUMMARY; else process.env.GITHUB_STEP_SUMMARY = previousSummary;
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test('allFundsFailed is true only when something was selected and every fund failed', () => {
+    expect(allFundsFailed({ catalogCount: 3, selectedCount: 2, updatedCount: 0, skippedCount: 0, failures: 2, holdings: 0, history: 0 })).toBe(true);
+    expect(allFundsFailed({ catalogCount: 3, selectedCount: 2, updatedCount: 1, skippedCount: 0, failures: 1, holdings: 0, history: 0 })).toBe(false);
+    expect(allFundsFailed({ catalogCount: 3, selectedCount: 0, updatedCount: 0, skippedCount: 0, failures: 0, holdings: 0, history: 0 })).toBe(false);
+  });
+});
+
+describe('write ordering, precision, dates and metrics shape', () => {
+  test('writeJsonIfChanged writes atomically: no temporary files remain, and a failed rename keeps the old content', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'tema-atomic-test-'));
+    try {
+      const target = join(directory, 'a.json');
+      expect(await writeJsonIfChanged(target, { a: 1 })).toBe(true);
+      expect(await writeJsonIfChanged(target, { a: 1, generatedAt: 'x' })).toBe(false);
+      expect(await writeJsonIfChanged(target, { a: 2 })).toBe(true);
+      expect((await readdir(directory)).sort()).toEqual(['a.json']);
+      const blocked = join(directory, 'dir.json');
+      await mkdir(blocked);
+      await expect(writeJsonIfChanged(blocked, { a: 3 })).rejects.toThrow();
+      expect((await readdir(directory)).sort()).toEqual(['a.json', 'dir.json']);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test('stale pages are removed only after the new meta.json exists', async () => {
+    await withQuietFeed(async directory => {
+      const run = (chart: unknown, extra: Record<string, string> = {}) => runUpdater(safetyEnv(directory, { TICKERS: 'AAA', EDGAR_FALLBACK: 'false', HISTORY_PAGE_SIZE: '10', ...extra }), { issuer: issuerFor(['AAA']), yahoo: yahooFor(chart), sec: downClient });
+      await run(dailyChart('2026-08-01', 29));
+      expect((await readdir(join(directory, 'funds', 'AAA', 'history'))).sort()).toEqual(['001.json', '002.json', '003.json']);
+      await run(dailyChart('2026-09-10', 20));
+      expect((await readdir(join(directory, 'funds', 'AAA', 'history'))).sort()).toEqual(['001.json', '002.json']);
+      const meta = JSON.parse(await readFile(join(directory, 'funds', 'AAA', 'meta.json'), 'utf8'));
+      expect(meta.history.pages).toEqual(['history/001.json', 'history/002.json']);
+    });
+  });
+
+  test('returns are computed from unrounded adjusted closes', () => {
+    const chart = parseYahooChart({ chart: { result: [{
+      meta: {},
+      timestamp: [isoEpoch('2025-12-31'), isoEpoch('2026-09-30')],
+      indicators: { quote: [{ close: [0.0041, 0.0049] }], adjclose: [{ adjclose: [0.0041, 0.0049] }] },
+    }] } });
+    expect(chart.days.map(day => day.adjClose)).toEqual([0.0041, 0.0049]);
+    expect(deriveTemaMetrics(chart).monthEnd.ytd).toBe(19.51);
+  });
+
+  test('since-inception is reported only for at least one year of history', () => {
+    const metricsFor = (days: number) => deriveTemaMetrics(parseYahooChart(dailyChart('2025-10-01', days))).monthEnd.sinceInception;
+    expect(metricsFor(300)).toBeNull();
+    expect(metricsFor(420)).not.toBeNull();
+  });
+
+  test('month-name dates parse as UTC regardless of the machine time zone', () => {
+    const script = `import { normalizeTemaDate, isoFromDateLabel } from ${JSON.stringify(new URL('./update-data.ts', import.meta.url).href)};
+      console.log(JSON.stringify([normalizeTemaDate('Sep 30 2026'), normalizeTemaDate('September 29, 2026'), isoFromDateLabel('Jun 04 2026'), new Date().getTimezoneOffset()]));`;
+    for (const zone of ['Pacific/Kiritimati', 'Pacific/Pago_Pago']) {
+      const result = Bun.spawnSync([process.execPath, '-e', script], { env: { ...process.env, TZ: zone }, stdout: 'pipe', stderr: 'pipe' });
+      const [first, second, third, offset] = JSON.parse(result.stdout.toString());
+      expect([first, second, third]).toEqual(['2026-09-30', '2026-09-29', '2026-06-04']);
+      expect(offset).not.toBe(0);
+    }
   });
 });
