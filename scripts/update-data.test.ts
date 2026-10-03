@@ -21,7 +21,9 @@ import {
   isoFromDateLabel,
   RETURNS_BASIS,
   withReturnsContract,
-  mergePublishedFallback,
+  carryPreviousSections,
+  nportBelongsToTema,
+  nportIsNewerThanPublished,
   yahooDistributionRows,
   yahooHistoryRows,
   createNportResolver,
@@ -313,8 +315,7 @@ describe('Tema updater configuration and filters', () => {
       HISTORY_PAGE_SIZE: '365',
       HISTORY_RANGE: '5y',
       SEC_UA: 'Tema test contact@example.com',
-      OUTPUT_DIR: 'isolated/api/tema',
-    });
+    }, 'isolated/api/tema');
     expect(config).toMatchObject({
       maxFetches: 5,
       requestSleepSeconds: 0.25,
@@ -841,11 +842,10 @@ describe('Tema metadata and index projection', () => {
     expect(formatTemaPercent(-1)).toBe('-1.00%');
   });
 
-  test('fills unavailable refreshed fields from the published version without replacing real zero or explicit Unknown', () => {
-    expect(mergePublishedFallback(
-      { metric: null, zero: 0, frequency: 'Unknown', rows: [], child: { value: '—' } },
-      { metric: 3.5, zero: 9, frequency: 'Quarterly', rows: [1], child: { value: 'kept', old: true } },
-    )).toEqual({ metric: 3.5, zero: 0, frequency: 'Unknown', rows: [1], child: { value: 'kept', old: true } });
+  test('carryPreviousSections copies only the named sections and never touches honest nulls elsewhere', () => {
+    const meta: Record<string, unknown> = { returns: { tr3y: null }, yields: { dividendYield: null }, nav: { value: null } };
+    carryPreviousSections(meta, { returns: { tr3y: 9 }, yields: { dividendYield: 1 }, nav: { value: 3 } }, ['returns', 'yields', 'missing']);
+    expect(meta).toEqual({ returns: { tr3y: 9 }, yields: { dividendYield: 1 }, nav: { value: null } });
   });
 });
 
@@ -871,7 +871,7 @@ describe('Tema CLI help and console contracts', () => {
 
   test('documents every supported environment control and performs no network work for help', () => {
     const help = updaterHelpText();
-    for (const item of ['MAX_FETCHES', 'REQUEST_SLEEP', 'CONCURRENCY', 'MAX_RETRIES', 'TICKERS', 'CATEGORY', 'AUM', 'TER', 'DIVIDEND_YIELD', 'SEC_YIELD', 'PERFORMANCE_', 'TOTAL_RETURN_', 'HOLDINGS_PAGE_SIZE', 'HISTORY_PAGE_SIZE', 'HISTORY_RANGE', 'OUTPUT_DIR', 'EDGAR_FALLBACK', 'SKIP_YAHOO', 'SEC_UA', 'VERBOSE', 'USE_SYSTEM_CA']) expect(help).toContain(item);
+    for (const item of ['MAX_FETCHES', 'REQUEST_SLEEP', 'CONCURRENCY', 'MAX_RETRIES', 'TICKERS', 'CATEGORY', 'AUM', 'TER', 'DIVIDEND_YIELD', 'SEC_YIELD', 'PERFORMANCE_', 'TOTAL_RETURN_', 'HOLDINGS_PAGE_SIZE', 'HISTORY_PAGE_SIZE', 'HISTORY_RANGE', 'EDGAR_FALLBACK', 'SKIP_YAHOO', 'SEC_UA', 'VERBOSE', 'USE_SYSTEM_CA']) expect(help).toContain(item);
     const log = console.log;
     const lines: string[] = [];
     console.log = (...values: unknown[]) => { lines.push(values.map(String).join(' ')); };
@@ -914,7 +914,7 @@ describe('Tema updater orchestration with offline provider fixtures', () => {
       yahoo: { fetch: async () => ok(JSON.stringify(chartPayload), 'application/json') },
       sec: { fetch: async () => { secRequests += 1; return new Response('unexpected SEC request', { status: 403 }); } },
     };
-    const config = readUpdaterConfig({ OUTPUT_DIR: directory, TICKERS: 'VOLT', REQUEST_SLEEP: '0', MAX_RETRIES: '1' });
+    const config = readUpdaterConfig({ TICKERS: 'VOLT', REQUEST_SLEEP: '0', MAX_RETRIES: '1' }, directory);
     const log = console.log;
     console.log = () => undefined;
     const snapshot = async (): Promise<string> => {
@@ -952,7 +952,7 @@ describe('Tema updater orchestration with offline provider fixtures', () => {
         yahoo: { fetch: async () => new Response('unavailable', { status: 503 }) },
         sec: { fetch: async () => new Response('disabled', { status: 403 }) },
       };
-      const retentionConfig = readUpdaterConfig({ OUTPUT_DIR: directory, TICKERS: 'VOLT', REQUEST_SLEEP: '0', MAX_RETRIES: '1', EDGAR_FALLBACK: 'false' });
+      const retentionConfig = readUpdaterConfig({ TICKERS: 'VOLT', REQUEST_SLEEP: '0', MAX_RETRIES: '1', EDGAR_FALLBACK: 'false' }, directory);
       const retained = await runUpdater(retentionConfig, failingClients);
       expect(retained).toMatchObject({ selectedCount: 1, updatedCount: 0, skippedCount: 1, failures: 0, holdings: 3, history: 2 });
       expect(await snapshot()).toBe(firstSnapshot);
@@ -995,7 +995,7 @@ describe('Tema bounded updater cursor', () => {
       yahoo: { fetch: async () => new Response('disabled', { status: 403 }) },
       sec: { fetch: async () => new Response('disabled', { status: 403 }) },
     };
-    const config = readUpdaterConfig({ OUTPUT_DIR: directory, MAX_FETCHES: '1', REQUEST_SLEEP: '0', CONCURRENCY: '1', MAX_RETRIES: '1', EDGAR_FALLBACK: 'false', SKIP_YAHOO: 'true' });
+    const config = readUpdaterConfig({ MAX_FETCHES: '1', REQUEST_SLEEP: '0', CONCURRENCY: '1', MAX_RETRIES: '1', EDGAR_FALLBACK: 'false', SKIP_YAHOO: 'true' }, directory);
     const log = console.log;
     console.log = () => undefined;
     try {
@@ -1117,7 +1117,7 @@ describe('README and workflow shape', () => {
     expect(wf).toContain("cron: '0 0 * * 0'");
     expect(wf).toContain('toJSON(inputs)');
     expect(wf).not.toMatch(/\$\{\{\s*(inputs|github\.event\.inputs)\./);
-    expect(configFile.OUTPUT_DIR).toBe('api/tema');
+    expect('OUTPUT_DIR' in configFile).toBe(false);
     expect(wf).toContain('git add api/tema\n');
     expect(wf).not.toMatch(/git add (?!api\/tema\b)/);
     expect(wf).toContain('PROTECTED_SEC_UA: ${{ vars.SEC_UA }}');
@@ -1178,5 +1178,181 @@ describe('system CA support', () => {
     installSystemCa('auto', reexec, false);
     expect(await (await globalThis.fetch('https://example.invalid')).text()).toBe('ok');
     expect(calls).toBe(1);
+  });
+});
+
+// --- offline multi-fund harness shared by the data-safety tests below ---
+const TEST_DAY = 86_400;
+const isoEpoch = (date: string) => Date.parse(`${date}T00:00:00Z`) / 1000;
+const okResponse = (body: string, contentType = 'text/html') => new Response(body, { status: 200, headers: { 'content-type': contentType } });
+const csvUrlFor = (ticker: string) => `https://temaetfs.com/hubfs/Website/Holdings/${ticker}-holdings-09292026.csv`;
+
+function dailyChart(startIso: string, days: number, extra: { dividends?: Record<string, { date: number; amount: number }> } = {}) {
+  const timestamp = Array.from({ length: days }, (_unused, index) => isoEpoch(startIso) + index * TEST_DAY);
+  const close = timestamp.map((_value, index) => 20 + index * 0.01);
+  return { chart: { result: [{
+    meta: { longName: 'Test ETF', exchangeName: 'Nasdaq', currency: 'USD', regularMarketPrice: close.at(-1) },
+    timestamp,
+    indicators: { quote: [{ close }], adjclose: [{ adjclose: close }] },
+    events: { dividends: extra.dividends ?? {} },
+  }] } };
+}
+
+function temaPage(ticker: string, options: { ter?: string | null; asOf?: string } = {}): string {
+  let html = fundPageFixture.replace(/VOLT/g, ticker).replace('September 29, 2026', options.asOf ?? 'September 29, 2026');
+  if (options.ter === null) html = html.replace(/<div class="box"><div class="col-specification"><span>Total Expense Ratio<\/span><\/div><div class="col-details">0\.75%<\/div><\/div>\n/, '');
+  return `${html}<a href="${csvUrlFor(ticker)}">Download Holdings (CSV)</a>`;
+}
+
+function nportClient(reportDate: string, counter?: { requests: number }) {
+  const xml = `<edgarSubmission><genInfo><regName>Tema ETF Trust</regName><regCik>0001944285</regCik><seriesName>Tema Electrification ETF</seriesName><seriesId>S000001</seriesId><repPdDate>${reportDate}</repPdDate></genInfo><formData><fundInfo><netAssets>1000.5</netAssets></fundInfo><invstOrSec><name>OLD CO</name><cusip>111111111</cusip><valUSD>10</valUSD><pctVal>5</pctVal><balance>3</balance><assetCat>EC</assetCat></invstOrSec></formData></edgarSubmission>`;
+  return { fetch: async (input: string | URL) => {
+    if (counter) counter.requests += 1;
+    const url = String(input);
+    if (url.includes('company_tickers_mf')) return okResponse(JSON.stringify({ fields: ['cik', 'seriesId', 'classId', 'symbol'], data: [[1944285, 'S000001', 'C000001', 'VOLT']] }), 'application/json');
+    if (url.includes('submissions')) return okResponse(JSON.stringify({ cik: '1944285', filings: { recent: { form: ['NPORT-P'], accessionNumber: ['0001-26-000001'], filingDate: ['2026-07-30'], reportDate: [reportDate] } } }), 'application/json');
+    if (url.includes('primary_doc')) return okResponse(xml, 'text/xml');
+    if (url.includes('company_tickers')) return okResponse('{}', 'application/json');
+    return new Response('not found', { status: 404 });
+  } };
+}
+
+function issuerFor(tickers: string[], options: { ter?: string | null; down?: boolean } = {}) {
+  const catalog = tickers.map(ticker => `<a href="https://temaetfs.com/${ticker.toLowerCase()}">${ticker} Tema ETF</a>`).join('');
+  return { fetch: async (input: string | URL) => {
+    const url = String(input);
+    if (url === 'https://temaetfs.com/funds') return okResponse(catalog);
+    if (options.down) return new Response('unavailable', { status: 503 });
+    const ticker = tickers.find(item => url === `https://temaetfs.com/${item.toLowerCase()}`);
+    if (ticker) return okResponse(temaPage(ticker, { ter: options.ter }));
+    if (url.startsWith('https://temaetfs.com/hubfs/')) return okResponse(holdingsFixture, 'text/csv');
+    return new Response('not found', { status: 404 });
+  } };
+}
+
+const yahooFor = (payload: unknown) => ({ fetch: async () => okResponse(JSON.stringify(payload), 'application/json') });
+const downClient = { fetch: async () => new Response('unavailable', { status: 503 }) };
+
+async function treeSnapshot(directory: string): Promise<string> {
+  const files: Array<[string, string]> = [];
+  async function visit(path: string): Promise<void> {
+    for (const entry of (await readdir(path, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
+      const child = join(path, entry.name);
+      if (entry.isDirectory()) await visit(child);
+      else files.push([child.slice(directory.length + 1), await readFile(child, 'utf8')]);
+    }
+  }
+  await visit(directory);
+  return JSON.stringify(files);
+}
+
+async function withQuietFeed<T>(run: (directory: string) => Promise<T>): Promise<T> {
+  const directory = await mkdtemp(join(tmpdir(), 'tema-safety-test-'));
+  const log = console.log;
+  console.log = () => undefined;
+  try {
+    return await run(directory);
+  } finally {
+    console.log = log;
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
+const safetyEnv = (directory: string, extra: Record<string, string> = {}) => readUpdaterConfig({ REQUEST_SLEEP: '0', MAX_RETRIES: '1', CONCURRENCY: '2', ...extra }, directory);
+
+describe('fallback freshness and retention (published data is never replaced by older or partial data)', () => {
+  test('nportIsNewerThanPublished compares ISO dates and date labels, and ignores unusable report dates', () => {
+    expect(nportIsNewerThanPublished('2026-05-31', '2026-09-30')).toBe(false);
+    expect(nportIsNewerThanPublished('2026-09-30', 'Sep 30 2026')).toBe(false);
+    expect(nportIsNewerThanPublished('2026-12-31', 'Sep 30 2026', '', undefined)).toBe(true);
+    expect(nportIsNewerThanPublished('2026-05-31')).toBe(true);
+    expect(nportIsNewerThanPublished('not a date', '2020-01-01')).toBe(false);
+    expect(nportBelongsToTema({ regCik: '0001944285' })).toBe(true);
+    expect(nportBelongsToTema({ regCik: '' })).toBe(true);
+    expect(nportBelongsToTema({ regCik: '0000000123' })).toBe(false);
+  });
+
+  test('EDGAR_FALLBACK=true with the issuer down keeps the published holdings and AUM instead of reverting to an old N-PORT', async () => {
+    await withQuietFeed(async directory => {
+      const healthy = { issuer: issuerFor(['VOLT']), yahoo: yahooFor(dailyChart('2026-09-01', 29)), sec: downClient };
+      await runUpdater(safetyEnv(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'true' }), healthy);
+      const published = await treeSnapshot(directory);
+      const secCounter = { requests: 0 };
+      const outage = { issuer: issuerFor(['VOLT'], { down: true }), yahoo: downClient, sec: nportClient('2026-05-31', secCounter) };
+      const summary = await runUpdater(safetyEnv(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'true' }), outage);
+      expect(summary).toMatchObject({ updatedCount: 0, skippedCount: 1, failures: 0 });
+      expect(await treeSnapshot(directory)).toBe(published);
+      const meta = JSON.parse(await readFile(join(directory, 'funds', 'VOLT', 'meta.json'), 'utf8'));
+      expect(meta.holdings.asOfDate).toBe('2026-09-29');
+      expect(meta.aum.value).toBe(734149760);
+      // the official page is up but its CSV is gone: an older N-PORT still must not replace the published holdings
+      const csvGone = { fetch: async (input: string | URL) => String(input).startsWith('https://temaetfs.com/hubfs/') ? new Response('gone', { status: 404 }) : issuerFor(['VOLT']).fetch(input) };
+      const second = await runUpdater(safetyEnv(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'true' }), { issuer: csvGone, yahoo: yahooFor(dailyChart('2026-09-01', 29)), sec: nportClient('2026-05-31') });
+      expect(second).toMatchObject({ updatedCount: 0, skippedCount: 1 });
+      expect(await treeSnapshot(directory)).toBe(published);
+    });
+  });
+
+  test('a newer N-PORT is accepted for a fund without published data, with the series verified', async () => {
+    await withQuietFeed(async directory => {
+      const outage = { issuer: issuerFor(['VOLT'], { down: true }), yahoo: downClient, sec: nportClient('2026-05-31') };
+      const first = await runUpdater(safetyEnv(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'true' }), outage);
+      expect(first).toMatchObject({ updatedCount: 1, failures: 0 });
+      const meta = JSON.parse(await readFile(join(directory, 'funds', 'VOLT', 'meta.json'), 'utf8'));
+      expect(meta.holdings.source).toContain('N-PORT');
+      expect(meta.holdings.totalRows).toBe(1);
+    });
+  });
+
+  test('HISTORY_RANGE=1y drops long-horizon returns instead of keeping old values under the new performanceAsOf', async () => {
+    await withQuietFeed(async directory => {
+      const run = (chart: unknown, env: Record<string, string>) => runUpdater(safetyEnv(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'false', ...env }), { issuer: issuerFor(['VOLT']), yahoo: yahooFor(chart), sec: downClient });
+      await run(dailyChart('2023-01-01', 1370), {});
+      const longRow = JSON.parse(await readFile(join(directory, 'index.json'), 'utf8')).funds[0];
+      expect(longRow.metrics.tr3y).not.toBeNull();
+      await run(dailyChart('2025-10-01', 365), { HISTORY_RANGE: '1y' });
+      const row = JSON.parse(await readFile(join(directory, 'index.json'), 'utf8')).funds[0];
+      expect(row.metrics.tr3y).toBeNull();
+      expect(row.metrics.cagr3y).toBeNull();
+      expect(row.returns.monthEnd.yr3).toBeNull();
+      expect(row.metrics.tr1y).toBeNull();
+      expect(row.metrics.performanceAsOf).toBe(longRow.metrics.performanceAsOf);
+    });
+  });
+
+  test('a TER that the source stops publishing becomes null; it is not kept forever', async () => {
+    await withQuietFeed(async directory => {
+      const chart = dailyChart('2026-09-01', 29);
+      const run = (ter?: null) => runUpdater(safetyEnv(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'false' }), { issuer: issuerFor(['VOLT'], { ter }), yahoo: yahooFor(chart), sec: downClient });
+      await run();
+      expect(JSON.parse(await readFile(join(directory, 'index.json'), 'utf8')).funds[0].terValue).toBe(0.75);
+      await run(null);
+      const row = JSON.parse(await readFile(join(directory, 'index.json'), 'utf8')).funds[0];
+      expect(row.terValue).toBeNull();
+      expect(row.ter).toBe('—');
+    });
+  });
+
+  test('Yahoo down while the page is up keeps the whole fund as it was (no new NAV next to stale returns)', async () => {
+    await withQuietFeed(async directory => {
+      await runUpdater(safetyEnv(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'false' }), { issuer: issuerFor(['VOLT']), yahoo: yahooFor(dailyChart('2026-09-01', 29)), sec: downClient });
+      const published = await treeSnapshot(directory);
+      const moved = { fetch: async (input: string | URL) => { const response = await issuerFor(['VOLT']).fetch(input); const text = await response.text(); return okResponse(text.replace('$35.81', '$99.99')); } };
+      const summary = await runUpdater(safetyEnv(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'false' }), { issuer: moved, yahoo: downClient, sec: downClient });
+      expect(summary).toMatchObject({ updatedCount: 0, skippedCount: 1, failures: 0 });
+      expect(await treeSnapshot(directory)).toBe(published);
+    });
+  });
+
+  test('SKIP_YAHOO carries returns, yields and distributions together with their as-of date', async () => {
+    await withQuietFeed(async directory => {
+      const base = { EDGAR_FALLBACK: 'false', TICKERS: 'VOLT' };
+      await runUpdater(safetyEnv(directory, base), { issuer: issuerFor(['VOLT']), yahoo: yahooFor(dailyChart('2023-01-01', 1370)), sec: downClient });
+      const before = JSON.parse(await readFile(join(directory, 'funds', 'VOLT', 'meta.json'), 'utf8'));
+      await runUpdater(safetyEnv(directory, { ...base, SKIP_YAHOO: 'true' }), { issuer: issuerFor(['VOLT']), yahoo: downClient, sec: downClient });
+      const after = JSON.parse(await readFile(join(directory, 'funds', 'VOLT', 'meta.json'), 'utf8'));
+      expect(after.returns).toEqual(before.returns);
+      expect(after.history).toEqual(before.history);
+    });
   });
 });

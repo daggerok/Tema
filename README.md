@@ -75,7 +75,6 @@ Unavailable return values stay `null`, never `0` (young funds have no 1-year or 
 | `HOLDINGS_PAGE_SIZE` | `250` | Rows in each generated current-holdings JSON page. |
 | `HISTORY_PAGE_SIZE` | `1000` | Rows in each generated history JSON page. |
 | `HISTORY_RANGE` | `max` | Maximum history or a bounded window such as `10y`. |
-| `OUTPUT_DIR` | `api/tema` | Static API output directory; the workflow stages only `api/tema`. |
 | `EDGAR_FALLBACK` | `true` | Use SEC N-PORT-P holdings when Tema CSV/page holdings are unavailable. |
 | `SKIP_YAHOO` | `false` | When true, skip Yahoo history updates and retain previously published history. |
 | `SEC_UA` | `daggerok ETF feed daggerok@gmail.com` | SEC User-Agent with a contact address; redacted in config logs. The protected repository Actions variable `SEC_UA` overrides it in the workflow. |
@@ -84,7 +83,7 @@ Unavailable return values stay `null`, never `0` (young funds have no 1-year or 
 
 Range syntax is inclusive `MIN:MAX`; either side may be empty, and `:` disables that filter. `TICKERS`, `CATEGORY`, AUM, TER, yield and return filters combine with **AND** logic. Funds not selected for a successful update retain their prior published metadata and data files.
 
-The workflow inputs are the lowercase names of the controls above (for example `max_fetches`, `performance_1y`); only `SEC_YIELD`, `OUTPUT_DIR`, `SEC_UA`, `VERBOSE` and `USE_SYSTEM_CA` have no individual input. The `SEC_YIELD` bound can be set through `advanced`.
+The output directory is fixed at `api/tema` (not a control, never an input). The workflow inputs are the lowercase names of the controls above (for example `max_fetches`, `performance_1y`); only `SEC_YIELD`, `SEC_UA`, `VERBOSE` and `USE_SYSTEM_CA` have no individual input. The `SEC_YIELD` bound can be set through `advanced`.
 
 ### Examples
 
