@@ -28,6 +28,7 @@ import {
   yahooHistoryRows,
   createNportResolver,
   createPacedHttpClient,
+  createProviderHttpClients,
   filterFundFromIndex,
   hasDataDependentFilters,
   main,
@@ -725,6 +726,72 @@ describe('paced HTTP client', () => {
   test('does not echo query values when reporting an unsuccessful response', async () => {
     const client = createPacedHttpClient({ gate: { pace: async () => undefined }, retries: 0, userAgent: 'test', fetchImpl: async () => new Response('denied', { status: 403 }) });
     await expect(responseText(client, 'https://example.test/private?token=must-not-leak')).rejects.toThrow('HTTP 403 for example.test/private');
+  });
+});
+
+describe('request timeout and real concurrency', () => {
+  test('a request that never answers times out per attempt, is retried, then fails without echoing the query', async () => {
+    let attempts = 0;
+    const client = createPacedHttpClient({
+      gate: { pace: async () => undefined },
+      retries: 1,
+      userAgent: 'test',
+      timeoutMs: 20,
+      sleep: async () => undefined,
+      fetchImpl: (() => { attempts += 1; return new Promise<Response>(() => undefined); }) as unknown as typeof fetch,
+    });
+    const started = Date.now();
+    await expect(responseText(client, 'https://example.test/slow?token=secret')).rejects.toThrow(/timed out after 0s for example\.test\/slow$/);
+    expect(attempts).toBe(2);
+    expect(Date.now() - started).toBeLessThan(2000);
+  });
+
+  test('a body that stalls after the headers is covered by the same timeout and a later attempt can succeed', async () => {
+    let attempts = 0;
+    const client = createPacedHttpClient({
+      gate: { pace: async () => undefined },
+      retries: 1,
+      userAgent: 'test',
+      timeoutMs: 30,
+      sleep: async () => undefined,
+      fetchImpl: (async () => {
+        attempts += 1;
+        if (attempts === 1) return new Response(new ReadableStream({ start() { /* never enqueues, never closes */ } }), { status: 200 });
+        return new Response('complete body', { status: 200 });
+      }) as unknown as typeof fetch,
+    });
+    expect(await responseText(client, 'https://example.test/stall')).toBe('complete body');
+    expect(attempts).toBe(2);
+  });
+
+  test('CONCURRENCY=1 never has two requests in flight, CONCURRENCY=3 reaches three (offline in-flight counter)', async () => {
+    const tickers = ['AAA', 'BBB', 'CCC'];
+    const run = async (concurrency: number): Promise<number> => {
+      let inFlight = 0;
+      let peak = 0;
+      const base = issuerFor(tickers);
+      const chart = JSON.stringify(dailyChart('2026-09-01', 29));
+      const counting = (async (input: string | URL) => {
+        inFlight += 1;
+        peak = Math.max(peak, inFlight);
+        try {
+          await new Promise(resolveWait => setTimeout(resolveWait, 25));
+          const url = String(input);
+          if (url.includes('finance/chart')) return okResponse(chart, 'application/json');
+          return await base.fetch(input);
+        } finally {
+          inFlight -= 1;
+        }
+      }) as unknown as typeof fetch;
+      await withQuietFeed(async directory => {
+        const config = safetyEnv(directory, { CONCURRENCY: String(concurrency), EDGAR_FALLBACK: 'false' });
+        const summary = await runUpdater(config, createProviderHttpClients(config, counting));
+        expect(summary).toMatchObject({ updatedCount: 3, failures: 0 });
+      });
+      return peak;
+    };
+    expect(await run(1)).toBe(1);
+    expect(await run(3)).toBe(3);
   });
 });
 

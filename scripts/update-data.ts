@@ -1428,7 +1428,10 @@ export type HttpClientOptions = {
   fetchImpl?: typeof fetch;
   sleep?: (milliseconds: number) => Promise<void>;
   now?: () => number;
+  /** Per-attempt limit for headers AND body, default 45 s; a timeout is retried like a network error. */
+  timeoutMs?: number;
 };
+export const DEFAULT_REQUEST_TIMEOUT_MS = 45_000;
 export type PacedHttpClient = { fetch: (input: string | URL, init?: RequestInit) => Promise<Response> };
 
 export function isRetryableHttpStatus(status: number): boolean {
@@ -1445,9 +1448,42 @@ export function retryDelayMilliseconds(retryAfter: string | null, attempt: numbe
   return Math.min(30_000, 500 * 2 ** Math.max(0, attempt));
 }
 
-/** Fetch wrapper with per-provider pacing, bounded retries, and no request-header logging. */
+/** One attempt with a hard deadline covering headers and the fully buffered body (a stalled body cannot hang the run). */
+async function fetchWithDeadline(fetchImpl: typeof fetch, input: string | URL, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const outer = init.signal;
+  const onOuterAbort = () => controller.abort(outer?.reason);
+  if (outer?.aborted) controller.abort(outer.reason);
+  else outer?.addEventListener('abort', onOuterAbort, { once: true });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      const error = new Error(`request timed out after ${Math.round(timeoutMs / 1000)}s for ${safeRequestPath(input)}`);
+      error.name = 'TimeoutError';
+      controller.abort(error);
+      reject(error);
+    }, timeoutMs);
+  });
+  try {
+    const attempt = (async (): Promise<Response> => {
+      const response = await fetchImpl(input, { ...init, signal: controller.signal });
+      if (isRetryableHttpStatus(response.status)) return response;
+      const body = [204, 205, 304].includes(response.status) ? null : await response.arrayBuffer();
+      return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers });
+    })();
+    attempt.catch(() => undefined);
+    return await Promise.race([attempt, deadline]);
+  } finally {
+    clearTimeout(timer);
+    outer?.removeEventListener('abort', onOuterAbort);
+  }
+}
+
+/** Fetch wrapper with per-provider pacing, a per-attempt timeout, bounded retries, and no request-header logging. */
 export function createPacedHttpClient(options: HttpClientOptions): PacedHttpClient {
   if (!Number.isSafeInteger(options.retries) || options.retries < 0) throw new Error(`retries must be a non-negative integer, got ${options.retries}`);
+  const timeoutMs = options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new Error(`timeoutMs must be a positive number, got ${timeoutMs}`);
   const fetchImpl = options.fetchImpl ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
   const sleep = options.sleep ?? (milliseconds => new Promise(resolveSleep => setTimeout(resolveSleep, milliseconds)));
   const now = options.now ?? Date.now;
@@ -1459,7 +1495,7 @@ export function createPacedHttpClient(options: HttpClientOptions): PacedHttpClie
         const headers = new Headers(init.headers);
         if (options.userAgent && !headers.has('user-agent')) headers.set('user-agent', options.userAgent);
         try {
-          const response = await fetchImpl(input, { ...init, headers });
+          const response = await fetchWithDeadline(fetchImpl, input, { ...init, headers }, timeoutMs);
           if (attempt >= options.retries || !isRetryableHttpStatus(response.status)) return response;
           const delay = retryDelayMilliseconds(response.headers.get('retry-after'), attempt, now());
           await response.body?.cancel().catch(() => undefined);
