@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T05:20:47Z",
+  "generatedAt": "2026-10-04T02:59:12Z",
   "ticker": "DSPY",
   "name": "DSPY S&P 500 Historical Weight ETF Strategy",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/dspy",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/DSPY-holdings-10012026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/DSPY-holdings-10022026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/DSPY",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-01)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-10-02)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.18
   },
   "nav": {
-    "display": "$65.96",
-    "value": 65.96,
-    "asOfDate": "Oct 01 2026"
+    "display": "$66.34",
+    "value": 66.34,
+    "asOfDate": "Oct 02 2026"
   },
   "marketPrice": {
-    "display": "$66.01",
-    "value": 66.01,
-    "asOfDate": "Oct 01 2026"
+    "display": "$66.37",
+    "value": 66.37,
+    "asOfDate": "Oct 02 2026"
   },
   "premiumDiscount": {
-    "display": "0.08%",
-    "value": 0.08
+    "display": "0.05%",
+    "value": 0.05
   },
   "aum": {
-    "display": "$1,005,752,113",
-    "value": 1005752113,
-    "asOfDate": "Oct 01 2026",
+    "display": "$1,013,551,121",
+    "value": 1013551121,
+    "asOfDate": "Oct 02 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -145,9 +145,9 @@
       "holdings/003.json"
     ],
     "pageSize": 250,
-    "totalRows": 509,
-    "asOfDate": "2026-10-01",
-    "source": "Tema official daily holdings CSV (2026-10-01)"
+    "totalRows": 510,
+    "asOfDate": "2026-10-02",
+    "source": "Tema official daily holdings CSV (2026-10-02)"
   },
   "history": {
     "pages": [

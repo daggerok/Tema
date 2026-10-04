@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T05:20:55Z",
+  "generatedAt": "2026-10-04T02:59:19Z",
   "ticker": "VOLT",
   "name": "VOLT Electrification ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/volt",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/VOLT-holdings-10012026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/VOLT-holdings-10022026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/VOLT",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-01)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-10-02)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$36.15",
-    "value": 36.15,
-    "asOfDate": "Oct 01 2026"
+    "display": "$36.69",
+    "value": 36.69,
+    "asOfDate": "Oct 02 2026"
   },
   "marketPrice": {
-    "display": "$36.16",
-    "value": 36.16,
-    "asOfDate": "Oct 01 2026"
+    "display": "$36.73",
+    "value": 36.73,
+    "asOfDate": "Oct 02 2026"
   },
   "premiumDiscount": {
-    "display": "0.03%",
-    "value": 0.03
+    "display": "0.10%",
+    "value": 0.1
   },
   "aum": {
-    "display": "$741,026,050",
-    "value": 741026050,
-    "asOfDate": "Oct 01 2026",
+    "display": "$752,215,563",
+    "value": 752215563,
+    "asOfDate": "Oct 02 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -128,8 +128,8 @@
     ],
     "pageSize": 250,
     "totalRows": 27,
-    "asOfDate": "2026-10-01",
-    "source": "Tema official daily holdings CSV (2026-10-01)"
+    "asOfDate": "2026-10-02",
+    "source": "Tema official daily holdings CSV (2026-10-02)"
   },
   "history": {
     "pages": [

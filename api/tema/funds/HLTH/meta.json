@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T05:20:48Z",
+  "generatedAt": "2026-10-04T02:59:13Z",
   "ticker": "HLTH",
   "name": "HLTH Healthcare AI ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/hlth",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/HLTH-holdings-10012026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/HLTH-holdings-10022026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/HLTH",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-01)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-10-02)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$29.47",
-    "value": 29.47,
-    "asOfDate": "Oct 01 2026"
+    "display": "$29.61",
+    "value": 29.61,
+    "asOfDate": "Oct 02 2026"
   },
   "marketPrice": {
-    "display": "$29.51",
-    "value": 29.51,
-    "asOfDate": "Oct 01 2026"
+    "display": "$29.68",
+    "value": 29.68,
+    "asOfDate": "Oct 02 2026"
   },
   "premiumDiscount": {
-    "display": "0.13%",
-    "value": 0.13
+    "display": "0.23%",
+    "value": 0.23
   },
   "aum": {
     "display": "—",
     "value": null,
-    "asOfDate": "Oct 01 2026",
+    "asOfDate": "Oct 02 2026",
     "source": null
   },
   "yields": {
@@ -119,8 +119,8 @@
     ],
     "pageSize": 250,
     "totalRows": 33,
-    "asOfDate": "2026-10-01",
-    "source": "Tema official daily holdings CSV (2026-10-01)"
+    "asOfDate": "2026-10-02",
+    "source": "Tema official daily holdings CSV (2026-10-02)"
   },
   "history": {
     "pages": [

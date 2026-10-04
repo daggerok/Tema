@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T05:20:51Z",
+  "generatedAt": "2026-10-04T02:59:16Z",
   "ticker": "NASA",
   "name": "NASA Space Innovators ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/nasa",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/NASA-holdings-10012026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/NASA-holdings-10022026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/NASA",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-01)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-10-02)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$23.87",
-    "value": 23.87,
-    "asOfDate": "Oct 01 2026"
+    "display": "$24.95",
+    "value": 24.95,
+    "asOfDate": "Oct 02 2026"
   },
   "marketPrice": {
-    "display": "$23.87",
-    "value": 23.87,
-    "asOfDate": "Oct 01 2026"
+    "display": "$25.00",
+    "value": 25,
+    "asOfDate": "Oct 02 2026"
   },
   "premiumDiscount": {
-    "display": "0.00%",
-    "value": 0
+    "display": "0.21%",
+    "value": 0.21
   },
   "aum": {
-    "display": "$1,136,161,014",
-    "value": 1136161014,
-    "asOfDate": "Oct 01 2026",
+    "display": "$1,187,495,903",
+    "value": 1187495903,
+    "asOfDate": "Oct 02 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -119,8 +119,8 @@
     ],
     "pageSize": 250,
     "totalRows": 36,
-    "asOfDate": "2026-10-01",
-    "source": "Tema official daily holdings CSV (2026-10-01)"
+    "asOfDate": "2026-10-02",
+    "source": "Tema official daily holdings CSV (2026-10-02)"
   },
   "history": {
     "pages": [
