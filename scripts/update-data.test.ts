@@ -5,7 +5,7 @@ import { mkdtemp, readFile, readdir, rm, stat, utimes } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  CONTROL_NAMES, RETURNS_BASIS, SEC_COMPANY_TICKERS_MF_URL, SEC_SUBMISSIONS_URL, SOFT_DEADLINE_MS,
+  type FetchFunction, CONTROL_NAMES, RETURNS_BASIS, SEC_COMPANY_TICKERS_MF_URL, SEC_SUBMISSIONS_URL, SOFT_DEADLINE_MS,
   createNportResolver, createPacedHttpClient, createProviderHttpClients, createRequestGate, decodeTemaCsv, deriveTemaMetrics,
   edgarSeriesFilingsUrl, fillNportTickers, filterFundFromIndex, findTemaHoldingsCsvUrl, indexFundFromMeta, installSystemCa,
   isCertError, isRetryableHttpStatus, isoFromDateLabel, minimalIndexFund, normalizeTemaDate, nportBelongsToTema,
@@ -408,7 +408,7 @@ describe('parsing', () => {
     ];
     const json = (payload: unknown) => new Response(JSON.stringify(payload), { status: 200, headers: { 'content-type': 'application/json' } });
     const archiveCalls: string[] = [];
-    const fetchImpl: typeof fetch = async (input) => {
+    const fetchImpl: FetchFunction = async (input) => {
       const url = String(input);
       if (url === SEC_COMPANY_TICKERS_MF_URL) return json({ fields: ['symbol', 'cik', 'seriesId', 'classId'], data: [['RSHO', '1944285', 'S000WELD', 'C0001'], ['PRVT', '1944285', 'S000PRVT', 'C0002']] });
       if (url === SEC_SUBMISSIONS_URL) return json({ cik: 1944285, filings: { recent: {
@@ -723,7 +723,7 @@ describe('pipeline', () => {
 
 // ===========================================================================
 describe('network', () => {
-  const client = (fetchImpl: typeof fetch, extra: Record<string, unknown> = {}) =>
+  const client = (fetchImpl: FetchFunction, extra: Record<string, unknown> = {}) =>
     createPacedHttpClient({ gate: { pace: async () => undefined }, retries: 1, userAgent: 'test', sleep: async () => undefined, fetchImpl, ...extra });
 
   test('429 is retried honouring Retry-After, the user agent is kept, each attempt is paced, bounded backoff for network errors', async () => {
