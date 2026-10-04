@@ -1442,12 +1442,14 @@ export async function writeFundPages(
   return { pages: names, pageSize, totalRows: rows.length, asOfDate, source };
 }
 
+/** Callable shape of fetch without the Bun-only static members (e.g. `preconnect`), so plain mocks type-check. */
+export type FetchFunction = (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => Promise<Response>;
 export type HttpGate = { pace: () => Promise<void> };
 export type HttpClientOptions = {
   gate: HttpGate;
   retries: number;
   userAgent: string;
-  fetchImpl?: typeof fetch;
+  fetchImpl?: FetchFunction;
   sleep?: (milliseconds: number) => Promise<void>;
   now?: () => number;
   /** Per-attempt limit for headers AND body, default 45 s; a timeout is retried like a network error. */
@@ -1471,7 +1473,7 @@ export function retryDelayMilliseconds(retryAfter: string | null, attempt: numbe
 }
 
 /** One attempt with a hard deadline covering headers and the fully buffered body (a stalled body cannot hang the run). */
-async function fetchWithDeadline(fetchImpl: typeof fetch, input: string | URL, init: RequestInit, timeoutMs: number): Promise<Response> {
+async function fetchWithDeadline(fetchImpl: FetchFunction, input: string | URL, init: RequestInit, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
   const outer = init.signal;
   const onOuterAbort = () => controller.abort(outer?.reason);
@@ -1533,7 +1535,7 @@ export function createPacedHttpClient(options: HttpClientOptions): PacedHttpClie
   };
 }
 
-export function createProviderHttpClients(config: Pick<UpdaterConfig, 'concurrency' | 'requestSleepSeconds' | 'maxRetries' | 'secUserAgent'>, fetchImpl?: typeof fetch) {
+export function createProviderHttpClients(config: Pick<UpdaterConfig, 'concurrency' | 'requestSleepSeconds' | 'maxRetries' | 'secUserAgent'>, fetchImpl?: FetchFunction) {
   const make = (userAgent: string) => createPacedHttpClient({
     gate: createRequestGate(config.concurrency, Math.round(config.requestSleepSeconds * 1000)),
     retries: config.maxRetries,
