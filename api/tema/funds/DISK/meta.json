@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T02:59:11Z",
+  "generatedAt": "2026-10-04T03:27:52Z",
   "ticker": "DISK",
   "name": "DISK Memory ETF",
   "category": "Equity",
@@ -53,6 +53,7 @@
   "yields": {
     "dividendYield": null,
     "dividendYieldText": "—",
+    "dividendYieldBasis": null,
     "dividendYieldKind": null,
     "distributionRate": null,
     "secYield": null,

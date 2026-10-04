@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T02:59:20Z",
+  "generatedAt": "2026-10-04T03:28:04Z",
   "ticker": "WELD",
   "name": "WELD U.S. Manufacturing & Reshoring ETF",
   "category": "Equity",
@@ -53,6 +53,7 @@
   "yields": {
     "dividendYield": 0.24,
     "dividendYieldText": "0.24%",
+    "dividendYieldBasis": "computed-trailing-12m",
     "dividendYieldKind": "Trailing 12-month Yahoo Finance chart distributions divided by latest market price",
     "distributionRate": null,
     "secYield": null,

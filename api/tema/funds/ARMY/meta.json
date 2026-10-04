@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T02:59:08Z",
+  "generatedAt": "2026-10-04T03:27:50Z",
   "ticker": "ARMY",
   "name": "ARMY International Defense ETF",
   "category": "Equity",
@@ -53,6 +53,7 @@
   "yields": {
     "dividendYield": null,
     "dividendYieldText": "—",
+    "dividendYieldBasis": null,
     "dividendYieldKind": null,
     "distributionRate": null,
     "secYield": null,

@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-04T02:59:21Z",
-  "catalogReadAt": "2026-10-04T02:59:21Z",
+  "generatedAt": "2026-10-04T03:28:04Z",
+  "catalogReadAt": "2026-10-04T03:28:04Z",
   "source": {
     "catalog": "https://temaetfs.com/funds",
     "holdings": "Tema ETFs official fund pages and daily HubSpot CSVs",
@@ -95,6 +95,7 @@
         "dividendYieldText": "—",
         "secYield": null,
         "secYieldText": "—",
+        "dividendYieldBasis": null,
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-09-30"
       },
@@ -183,6 +184,7 @@
         "dividendYieldText": "0.05%",
         "secYield": null,
         "secYieldText": "—",
+        "dividendYieldBasis": "computed-trailing-12m",
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-09-30"
       },
@@ -271,6 +273,7 @@
         "dividendYieldText": "—",
         "secYield": null,
         "secYieldText": "—",
+        "dividendYieldBasis": null,
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-09-30"
       },
@@ -359,6 +362,7 @@
         "dividendYieldText": "—",
         "secYield": null,
         "secYieldText": "—",
+        "dividendYieldBasis": null,
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-09-30"
       },
@@ -447,6 +451,7 @@
         "dividendYieldText": "0.93%",
         "secYield": null,
         "secYieldText": "—",
+        "dividendYieldBasis": "computed-trailing-12m",
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-09-30"
       },
@@ -535,6 +540,7 @@
         "dividendYieldText": "—",
         "secYield": null,
         "secYieldText": "—",
+        "dividendYieldBasis": null,
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-09-30"
       },
@@ -623,6 +629,7 @@
         "dividendYieldText": "1.32%",
         "secYield": null,
         "secYieldText": "—",
+        "dividendYieldBasis": "computed-trailing-12m",
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-09-30"
       },
@@ -711,6 +718,7 @@
         "dividendYieldText": "—",
         "secYield": null,
         "secYieldText": "—",
+        "dividendYieldBasis": null,
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-09-30"
       },
@@ -799,6 +807,7 @@
         "dividendYieldText": "—",
         "secYield": null,
         "secYieldText": "—",
+        "dividendYieldBasis": null,
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-09-30"
       },
@@ -887,6 +896,7 @@
         "dividendYieldText": "—",
         "secYield": null,
         "secYieldText": "—",
+        "dividendYieldBasis": null,
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-08-31"
       },
@@ -975,6 +985,7 @@
         "dividendYieldText": "—",
         "secYield": null,
         "secYieldText": "—",
+        "dividendYieldBasis": null,
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-09-30"
       },
@@ -1063,6 +1074,7 @@
         "dividendYieldText": "0.27%",
         "secYield": null,
         "secYieldText": "—",
+        "dividendYieldBasis": "computed-trailing-12m",
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-09-30"
       },
@@ -1151,6 +1163,7 @@
         "dividendYieldText": "0.36%",
         "secYield": null,
         "secYieldText": "—",
+        "dividendYieldBasis": "computed-trailing-12m",
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-09-30"
       },
@@ -1239,6 +1252,7 @@
         "dividendYieldText": "0.24%",
         "secYield": null,
         "secYieldText": "—",
+        "dividendYieldBasis": "computed-trailing-12m",
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-09-30"
       },

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T02:59:15Z",
+  "generatedAt": "2026-10-04T03:27:59Z",
   "ticker": "LAZR",
   "name": "LAZR Photonics & Optical ETF",
   "category": "Equity",
@@ -53,6 +53,7 @@
   "yields": {
     "dividendYield": null,
     "dividendYieldText": "—",
+    "dividendYieldBasis": null,
     "dividendYieldKind": null,
     "distributionRate": null,
     "secYield": null,
