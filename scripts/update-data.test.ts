@@ -13,7 +13,7 @@ import {
   parseEdgarAtomFilings, parseNport, parseNportAccessions, parseTemaCatalog, parseTemaFundPage, parseTemaFundTickerTable,
   parseTemaHoldingsCsv, parseYahooChart, passesFundFilters, passesRange, passesStaticFundFilters, readUpdaterConfig,
   resolveControls, resolveTemaNportSeriesRef, responseText, retryDelayMilliseconds, runUpdater, runtimeControls,
-  samePublishedContent, selectUpdateBatch, updaterHelpText, withReturnsContract, writeJsonIfChanged, yahooChartUrl,
+  dividendYieldBasisFor, samePublishedContent, selectUpdateBatch, updaterHelpText, withReturnsContract, writeJsonIfChanged, yahooChartUrl,
   yahooDistributionRows, yahooHistoryRows, buildTemaFundMeta, shiftIsoDate, allFundsFailed, retainCatalogEntries,
 } from './update-data.ts';
 
@@ -454,8 +454,8 @@ describe('metrics', () => {
   test('returnsBasis is never empty and travels with an ISO performanceAsOf (or null), same keys on every row', () => {
     expect(RETURNS_BASIS).toMatch(/Yahoo/);
     expect([isoFromDateLabel('Sep 30 2026'), isoFromDateLabel('Feb 31 2026'), isoFromDateLabel(''), isoFromDateLabel(undefined)]).toEqual(['2026-09-30', null, null, null]);
-    expect(withReturnsContract({ ytd: null, returnsBasis: '-', performanceAsOf: 'Sep 30 2026' })).toEqual({ ytd: null, returnsBasis: RETURNS_BASIS, performanceAsOf: null });
-    expect(Object.keys(withReturnsContract({ performanceAsOf: '2026-09-30', returnsBasis: 'x', ytd: 1 }))).toEqual(['ytd', 'returnsBasis', 'performanceAsOf']);
+    expect(withReturnsContract({ ytd: null, returnsBasis: '-', performanceAsOf: 'Sep 30 2026' })).toEqual({ ytd: null, dividendYieldBasis: null, returnsBasis: RETURNS_BASIS, performanceAsOf: null });
+    expect(Object.keys(withReturnsContract({ performanceAsOf: '2026-09-30', returnsBasis: 'x', ytd: 1 }))).toEqual(['ytd', 'dividendYieldBasis', 'returnsBasis', 'performanceAsOf']);
     const fund = { ticker: 'NEW', name: 'New ETF', fundPage: 'https://temaetfs.com/new' };
     const young = indexFundFromMeta(fund, { returns: { monthEnd: { asOfDate: 'Sep 30 2026', yr1: null, ytd: 1.5 } } });
     expect(young.metrics).toMatchObject({ ytd: 1.5, tr1y: null, tr3y: null, performanceAsOf: '2026-09-30', returnsBasis: RETURNS_BASIS });
@@ -463,7 +463,28 @@ describe('metrics', () => {
     const blank = minimalIndexFund(fund, { metrics: { ytd: 3 } });
     expect(blank.metrics).toMatchObject({ ytd: 3, tr1y: null, returnsBasis: RETURNS_BASIS, performanceAsOf: null });
     expect(Object.keys(blank.metrics as object)).toEqual(Object.keys(minimalIndexFund(fund).metrics as object));
-    expect(Object.keys(blank.metrics as object)).toEqual(['ytd', 'tr1y', 'tr3y', 'tr5y', 'tr10y', 'cagr3y', 'cagr5y', 'cagr10y', 'siAnn', 'dividendYield', 'dividendYieldText', 'secYield', 'secYieldText', 'returnsBasis', 'performanceAsOf']);
+    expect(Object.keys(blank.metrics as object)).toEqual(['ytd', 'tr1y', 'tr3y', 'tr5y', 'tr10y', 'cagr3y', 'cagr5y', 'cagr10y', 'siAnn', 'dividendYield', 'dividendYieldText', 'secYield', 'secYieldText', 'dividendYieldBasis', 'returnsBasis', 'performanceAsOf']);
+  });
+
+  test('dividendYieldBasis: computed-trailing-12m exactly when the yield exists, null otherwise, kept with the yield on every row kind', () => {
+    const fund = { ticker: 'NEW', name: 'New ETF', fundPage: 'https://temaetfs.com/new' };
+    const day = (date: string, close: number) => ({ date, close, adjClose: close, volume: 1 });
+    const chart = (dividends: { date: string; amount: number }[]) => ({ days: [day('2026-01-02', 100), day('2026-09-29', 120)], dividends, currency: 'USD', exchangeName: 'Nasdaq', longName: 'X', regularMarketPrice: 120, regularMarketTime: null, firstTradeDate: null });
+    expect(deriveTemaMetrics(chart([{ date: '2026-09-01', amount: 1.2 }])).metrics).toMatchObject({ dividendYield: 1, dividendYieldBasis: 'computed-trailing-12m' });
+    expect(deriveTemaMetrics(chart([])).metrics).toMatchObject({ dividendYield: null, dividendYieldBasis: null });
+    expect(deriveTemaMetrics(parseYahooChart(dailyChart('2026-09-01', 29))).metrics).toMatchObject({ dividendYield: null, dividendYieldBasis: null });
+    expect(dividendYieldBasisFor(null, 'indicated')).toBeNull();
+    expect(dividendYieldBasisFor(1.5)).toBe('computed-trailing-12m');
+    expect(dividendYieldBasisFor(1.5, 'bogus')).toBe('computed-trailing-12m');
+    const rebuilt = indexFundFromMeta(fund, { yields: { dividendYield: 2.1, dividendYieldBasis: 'computed-trailing-12m' } });
+    const legacy = indexFundFromMeta(fund, { yields: { dividendYield: 2.1 } });
+    const empty = indexFundFromMeta(fund, {});
+    expect([rebuilt.metrics, legacy.metrics, empty.metrics].map((m) => (m as Record<string, unknown>).dividendYieldBasis)).toEqual(['computed-trailing-12m', 'computed-trailing-12m', null]);
+    const retained = minimalIndexFund(fund, { metrics: { dividendYield: 3, dividendYieldBasis: 'computed-trailing-12m' } });
+    const placeholder = minimalIndexFund(fund);
+    expect([(retained.metrics as Record<string, unknown>).dividendYieldBasis, (placeholder.metrics as Record<string, unknown>).dividendYieldBasis]).toEqual(['computed-trailing-12m', null]);
+    expect(Object.keys(rebuilt.metrics as object)).toEqual(Object.keys(placeholder.metrics as object));
+    expect(Object.keys(retained.metrics as object)).toEqual(Object.keys(empty.metrics as object));
   });
 
   test('meta and index rows carry the official page fields with honest Yahoo/SEC provenance and net TER mapping', () => {
@@ -563,7 +584,7 @@ describe('pipeline', () => {
       const blank = funds.find((row: { ticker: string }) => row.ticker === 'BBB');
       expect(blank.dataFile).toBeNull();
       expect(Object.keys(blank.metrics)).toEqual(Object.keys(funds.find((row: { ticker: string }) => row.ticker === 'AAA').metrics));
-      expect(Object.values(blank.metrics).filter((value) => value === null)).toHaveLength(12);
+      expect(Object.values(blank.metrics).filter((value) => value === null)).toHaveLength(13);
       expect(blank.metrics.returnsBasis).toBe(RETURNS_BASIS);
       const index = await readIndex(directory);
       index.funds = index.funds.filter((row: { ticker: string }) => row.ticker !== 'AAA');

@@ -995,12 +995,22 @@ export function isoFromDateLabel(label: unknown): string | null {
   return epochToIsoDate(date.getTime() / 1000);
 }
 
-/** Put the mandatory returnsBasis and performanceAsOf keys last; basis never empty, as-of null or ISO. */
+export const DIVIDEND_YIELD_BASES = ['official-trailing-12m', 'official-distribution-rate', 'official-other', 'computed-trailing-12m', 'indicated'] as const;
+export type DividendYieldBasis = typeof DIVIDEND_YIELD_BASES[number];
+
+/** Tema publishes no yield: the only source is the updater's trailing 12-month Yahoo distributions over the latest price. */
+export function dividendYieldBasisFor(dividendYield: unknown, kind: unknown = null): DividendYieldBasis | null {
+  if (typeof dividendYield !== 'number' || !Number.isFinite(dividendYield)) return null;
+  if (typeof kind === 'string' && (DIVIDEND_YIELD_BASES as readonly string[]).includes(kind)) return kind as DividendYieldBasis;
+  return 'computed-trailing-12m';
+}
+
+/** Put dividendYieldBasis, then the mandatory returnsBasis and performanceAsOf keys last; basis never empty, as-of null or ISO, yield code null exactly when the yield is null. */
 export function withReturnsContract(metrics: Record<string, unknown>, performanceAsOf: unknown = metrics.performanceAsOf): Record<string, unknown> {
-  const { returnsBasis, performanceAsOf: _ignored, ...rest } = metrics;
+  const { returnsBasis, performanceAsOf: _ignored, dividendYieldBasis, ...rest } = metrics;
   const basis = typeof returnsBasis === 'string' && returnsBasis.trim() && returnsBasis.trim() !== '-' ? returnsBasis : RETURNS_BASIS;
   const asOf = typeof performanceAsOf === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(performanceAsOf) ? performanceAsOf : null;
-  return { ...rest, returnsBasis: basis, performanceAsOf: asOf };
+  return { ...rest, dividendYieldBasis: dividendYieldBasisFor(rest.dividendYield, dividendYieldBasis), returnsBasis: basis, performanceAsOf: asOf };
 }
 
 export type PeriodReturnMetrics = {
@@ -1100,7 +1110,7 @@ export function deriveTemaMetrics(chart: ParsedYahooChart): DerivedTemaMetrics {
   }
   if (!latest) {
     return {
-      metrics: { ytd: null, tr1y: null, tr3y: null, tr5y: null, tr10y: null, cagr3y: null, cagr5y: null, cagr10y: null, siAnn: null, dividendYield, dividendYieldText: formatTemaPercent(dividendYield), secYield: null, secYieldText: '—', returnsBasis: RETURNS_BASIS, performanceAsOf: null },
+      metrics: { ytd: null, tr1y: null, tr3y: null, tr5y: null, tr10y: null, cagr3y: null, cagr5y: null, cagr10y: null, siAnn: null, dividendYield, dividendYieldText: formatTemaPercent(dividendYield), secYield: null, secYieldText: '—', dividendYieldBasis: dividendYieldBasisFor(dividendYield), returnsBasis: RETURNS_BASIS, performanceAsOf: null },
       monthEnd: { asOfDate: '', mo1: null, qtd: null, ytd: null, yr1: null, yr3: null, yr5: null, yr10: null, sinceInception: null },
       quarterEnd: { asOfDate: '', mo1: null, qtd: null, ytd: null, yr1: null, yr3: null, yr5: null, yr10: null, sinceInception: null },
       dividendYield, latestDividend, frequency,
@@ -1129,6 +1139,7 @@ export function deriveTemaMetrics(chart: ParsedYahooChart): DerivedTemaMetrics {
       dividendYieldText: formatTemaPercent(dividendYield),
       secYield: null,
       secYieldText: '—',
+      dividendYieldBasis: dividendYieldBasisFor(dividendYield),
       returnsBasis: RETURNS_BASIS,
       performanceAsOf: latest.date,
     },
@@ -1372,7 +1383,7 @@ export function minimalIndexFund(fund: TemaFund, previousValue: unknown = null):
     premiumDiscountValue: null,
     distributions: { frequency: null, exDate: null, dividend: null },
     returns: { monthEnd: emptyReturnSet(), quarterEnd: emptyReturnSet() },
-    metrics: { ytd: null, tr1y: null, tr3y: null, tr5y: null, tr10y: null, cagr3y: null, cagr5y: null, cagr10y: null, siAnn: null, dividendYield: null, dividendYieldText: '—', secYield: null, secYieldText: '—', returnsBasis: RETURNS_BASIS, performanceAsOf: null },
+    metrics: { ytd: null, tr1y: null, tr3y: null, tr5y: null, tr10y: null, cagr3y: null, cagr5y: null, cagr10y: null, siAnn: null, dividendYield: null, dividendYieldText: '—', secYield: null, secYieldText: '—', dividendYieldBasis: null, returnsBasis: RETURNS_BASIS, performanceAsOf: null },
     holdings: 0,
     history: 0,
   };
@@ -1830,6 +1841,7 @@ export function buildTemaFundMeta(input: TemaMetaBuildInput): Record<string, unk
     yields: {
       dividendYield,
       dividendYieldText: formatTemaPercent(dividendYield),
+      dividendYieldBasis: dividendYieldBasisFor(dividendYield),
       dividendYieldKind: chart?.dividends.length ? 'Trailing 12-month Yahoo Finance chart distributions divided by latest market price' : null,
       distributionRate: null,
       secYield: null,
@@ -1896,6 +1908,7 @@ export function indexFundFromMeta(fund: TemaFund, metaValue: unknown): Record<st
     dividendYieldText: typeof yields.dividendYieldText === 'string' && yields.dividendYieldText ? yields.dividendYieldText : formatTemaPercent(numberOrNull(yields.dividendYield)),
     secYield: numberOrNull(yields.secYield),
     secYieldText: typeof yields.secYieldText === 'string' && yields.secYieldText ? yields.secYieldText : formatTemaPercent(numberOrNull(yields.secYield)),
+    dividendYieldBasis: dividendYieldBasisFor(numberOrNull(yields.dividendYield), yields.dividendYieldBasis),
     returnsBasis: typeof returns.returnsBasis === 'string' ? returns.returnsBasis : '',
     performanceAsOf: returns.performanceAsOf ?? isoFromDateLabel(monthEnd.asOfDate),
   };

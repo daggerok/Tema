@@ -67,9 +67,19 @@ Each fund carries a `metrics` object that powers the catalog columns shared with
 - `tr3y` / `tr5y` / `tr10y` - cumulative estimates `(1 + CAGR)^n - 1` -> *TR 3Y/5Y/10Y*
 - `siAnn` - annualized estimate since the first available history row, when sufficient history is available -> *SI Ann.*
 - `dividendYield` - 12-month trailing yield from observed Yahoo distributions when available
+- `dividendYieldBasis` - code for the definition behind `dividendYield`, `null` exactly when `dividendYield` is `null` (see the table below)
 - `secYield` - reserved for a published SEC-yield value; currently unavailable in the generated feed
 - `returnsBasis` - mandatory non-empty text saying how the returns are computed: here always Yahoo Finance adjusted close at the last completed month-end (an estimate, not official Tema NAV total returns)
 - `performanceAsOf` - mandatory ISO `YYYY-MM-DD` date the returns are as of: the Yahoo close date of that month-end anchor (not the NAV date), `null` only when no price history exists
+
+Dividend yield basis: Tema publishes no yield of its own, so every non-null `dividendYield` is computed by the updater.
+
+| `dividendYieldBasis` | Meaning for Tema |
+| --- | --- |
+| `computed-trailing-12m` | sum of Yahoo Finance chart distributions of the last 12 months divided by the latest market price (the only value used) |
+| `null` | no yield (`dividendYield` is `null`) |
+
+The other standard codes (`official-trailing-12m`, `official-distribution-rate`, `official-other`, `indicated`) are never emitted for Tema. Rows from older runs without the key get `computed-trailing-12m` when they carry a yield.
 
 Unavailable return values stay `null`, never `0` (young funds have no 1-year or longer figures). `siAnn` needs at least one year of history. `dividendYieldText` and `secYieldText` carry the display text (`—` when unavailable).
 
