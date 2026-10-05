@@ -6,9 +6,12 @@ One of the app's features lets you select Tema ETFs in the Watchlist and aggrega
 
 ```bash
 bunx degit daggerok/Tema#main ./12345 && cd $_
-bunx serve . -p 1234
+bun install
+bun run serve
 open http://0:1234
 ```
+
+`bun run serve` is the Parcel dev server (it copies `api/` into `dist/api` first); `bun run build` writes the production site to `dist` and `bun run build-github-pages` does the same for the `/Tema/` public URL
 
 The published application is available at <https://daggerok.github.io/Tema/>.
 
@@ -131,7 +134,7 @@ PERFORMANCE_1Y="15:" HISTORY_RANGE=10y bun scripts/update-data.ts
 
 ## TypeScript and verification
 
-The browser app is intentionally build-free: `index.html` carries the markup, styles and bootstrap, and `app.tsx` is TypeScript compiled in the browser with Babel standalone - no build step, no bundler, no `tsconfig.json` needed. Bun runs TypeScript out of the box.
+The browser app lives in `src/`: `index.html` carries the markup, `src/index.css` the Tailwind v4 styles and `src/main.tsx` is the TypeScript entry bundled by Parcel into `dist` - no `tsconfig.json` needed. Bun runs TypeScript out of the box.
 
 Verification before every publish: `bun install --frozen-lockfile`, `bun test`, `bun build --target=bun scripts/update-data.ts --outfile=/dev/null`, and `git diff --check`. The README, config file, `--help` text and workflow are kept in sync by `bun test`.
 
