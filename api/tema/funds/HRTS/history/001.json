@@ -2,7 +2,7 @@
   "ticker": "HRTS",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 718,
+  "totalRows": 723,
   "headers": [
     "Date",
     "NAV",
@@ -4316,6 +4316,36 @@
       "Date": "Oct 02 2026",
       "NAV": "",
       "Market Price": "35.804001",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 05 2026",
+      "NAV": "",
+      "Market Price": "35.895",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 06 2026",
+      "NAV": "",
+      "Market Price": "35.674",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 07 2026",
+      "NAV": "",
+      "Market Price": "35.941002",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 08 2026",
+      "NAV": "",
+      "Market Price": "35.709",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 09 2026",
+      "NAV": "",
+      "Market Price": "36.219002",
       "Premium/Discount": ""
     }
   ]

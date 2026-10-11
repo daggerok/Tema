@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-04T03:27:50Z",
+  "generatedAt": "2026-10-11T02:23:45Z",
   "ticker": "CANC",
   "name": "CANC Oncology ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/canc",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/CANC-holdings-10022026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/CANC-holdings-10092026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/CANC",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-02)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-10-09)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": null
   },
   "nav": {
-    "display": "$40.99",
-    "value": 40.99,
-    "asOfDate": "Oct 02 2026"
+    "display": "$40.77",
+    "value": 40.77,
+    "asOfDate": "Oct 09 2026"
   },
   "marketPrice": {
-    "display": "$40.99",
-    "value": 40.99,
-    "asOfDate": "Oct 02 2026"
+    "display": "$40.78",
+    "value": 40.78,
+    "asOfDate": "Oct 09 2026"
   },
   "premiumDiscount": {
-    "display": "0.00%",
-    "value": 0
+    "display": "0.02%",
+    "value": 0.02
   },
   "aum": {
-    "display": "$204,120,124",
-    "value": 204120124,
-    "asOfDate": "Oct 02 2026",
+    "display": "$205,094,576",
+    "value": 205094576,
+    "asOfDate": "Oct 09 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -132,17 +132,17 @@
       "holdings/001.json"
     ],
     "pageSize": 250,
-    "totalRows": 59,
-    "asOfDate": "2026-10-02",
-    "source": "Tema official daily holdings CSV (2026-10-02)"
+    "totalRows": 58,
+    "asOfDate": "2026-10-09",
+    "source": "Tema official daily holdings CSV (2026-10-09)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 788,
-    "asOfDate": "2026-10-02",
+    "totalRows": 793,
+    "asOfDate": "2026-10-09",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

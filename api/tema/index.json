@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-04T03:28:04Z",
-  "catalogReadAt": "2026-10-04T03:28:04Z",
+  "generatedAt": "2026-10-11T02:23:57Z",
+  "catalogReadAt": "2026-10-11T02:23:57Z",
   "source": {
     "catalog": "https://temaetfs.com/funds",
     "holdings": "Tema ETFs official fund pages and daily HubSpot CSVs",
@@ -9,8 +9,8 @@
   },
   "counts": {
     "funds": 14,
-    "holdings": 943,
-    "history": 4679
+    "holdings": 935,
+    "history": 4744
   },
   "funds": [
     {
@@ -25,17 +25,17 @@
       "terValue": null,
       "terGross": "—",
       "terGrossValue": null,
-      "nav": "$22.94",
-      "navValue": 22.94,
-      "aum": "$7,340,191",
-      "aumValue": 7340191,
-      "asOfDate": "Oct 02 2026",
+      "nav": "$22.54",
+      "navValue": 22.54,
+      "aum": "$7,211,266",
+      "aumValue": 7211266,
+      "asOfDate": "Oct 09 2026",
       "inceptionDate": "Sep 25 2025",
       "exchange": "Nasdaq",
-      "closePrice": "$23.09",
-      "closePriceValue": 23.09,
-      "premiumDiscount": "0.66%",
-      "premiumDiscountValue": 0.66,
+      "closePrice": "$22.60",
+      "closePriceValue": 22.6,
+      "premiumDiscount": "0.29%",
+      "premiumDiscountValue": 0.29,
       "distributions": {
         "frequency": "Unknown",
         "exDate": null,
@@ -100,7 +100,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 35,
-      "history": 257
+      "history": 262
     },
     {
       "ticker": "CANC",
@@ -114,17 +114,17 @@
       "terValue": null,
       "terGross": "—",
       "terGrossValue": null,
-      "nav": "$40.99",
-      "navValue": 40.99,
-      "aum": "$204,120,124",
-      "aumValue": 204120124,
-      "asOfDate": "Oct 02 2026",
+      "nav": "$40.77",
+      "navValue": 40.77,
+      "aum": "$205,094,576",
+      "aumValue": 205094576,
+      "asOfDate": "Oct 09 2026",
       "inceptionDate": "Aug 14 2023",
       "exchange": "Nasdaq",
-      "closePrice": "$40.99",
-      "closePriceValue": 40.99,
-      "premiumDiscount": "0.00%",
-      "premiumDiscountValue": 0,
+      "closePrice": "$40.78",
+      "closePriceValue": 40.78,
+      "premiumDiscount": "0.02%",
+      "premiumDiscountValue": 0.02,
       "distributions": {
         "frequency": "Annually",
         "exDate": "12/10/2025",
@@ -188,8 +188,8 @@
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-09-30"
       },
-      "holdings": 59,
-      "history": 788
+      "holdings": 58,
+      "history": 793
     },
     {
       "ticker": "DICE",
@@ -203,17 +203,17 @@
       "terValue": 0.75,
       "terGross": "—",
       "terGrossValue": null,
-      "nav": "$24.04",
-      "navValue": 24.04,
+      "nav": "$24.15",
+      "navValue": 24.15,
       "aum": "—",
       "aumValue": null,
-      "asOfDate": "Oct 02 2026",
+      "asOfDate": "Oct 09 2026",
       "inceptionDate": "Sep 08 2026",
       "exchange": "CBOE BZX Exchange",
-      "closePrice": "$24.08",
-      "closePriceValue": 24.08,
-      "premiumDiscount": "0.18%",
-      "premiumDiscountValue": 0.18,
+      "closePrice": "$24.28",
+      "closePriceValue": 24.28,
+      "premiumDiscount": "0.52%",
+      "premiumDiscountValue": 0.52,
       "distributions": {
         "frequency": "Unknown",
         "exDate": null,
@@ -278,7 +278,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 39,
-      "history": 18
+      "history": 23
     },
     {
       "ticker": "DISK",
@@ -292,17 +292,17 @@
       "terValue": 0.75,
       "terGross": "—",
       "terGrossValue": null,
-      "nav": "$39.52",
-      "navValue": 39.52,
-      "aum": "$84,959,344",
-      "aumValue": 84959344,
-      "asOfDate": "Oct 02 2026",
+      "nav": "$36.47",
+      "navValue": 36.47,
+      "aum": "$78,413,078",
+      "aumValue": 78413078,
+      "asOfDate": "Oct 09 2026",
       "inceptionDate": "Jun 29 2026",
       "exchange": "NYSE",
-      "closePrice": "$39.49",
-      "closePriceValue": 39.49,
-      "premiumDiscount": "-0.07%",
-      "premiumDiscountValue": -0.07,
+      "closePrice": "$36.03",
+      "closePriceValue": 36.03,
+      "premiumDiscount": "-1.21%",
+      "premiumDiscountValue": -1.21,
       "distributions": {
         "frequency": "Unknown",
         "exDate": null,
@@ -367,7 +367,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 18,
-      "history": 67
+      "history": 72
     },
     {
       "ticker": "DSPY",
@@ -381,17 +381,17 @@
       "terValue": 0.18,
       "terGross": "—",
       "terGrossValue": null,
-      "nav": "$66.34",
-      "navValue": 66.34,
-      "aum": "$1,013,551,121",
-      "aumValue": 1013551121,
-      "asOfDate": "Oct 02 2026",
+      "nav": "$67.14",
+      "navValue": 67.14,
+      "aum": "$1,025,779,615",
+      "aumValue": 1025779615,
+      "asOfDate": "Oct 09 2026",
       "inceptionDate": "Apr 01 2025",
       "exchange": "NYSE",
-      "closePrice": "$66.37",
-      "closePriceValue": 66.37,
-      "premiumDiscount": "0.05%",
-      "premiumDiscountValue": 0.05,
+      "closePrice": "$67.14",
+      "closePriceValue": 67.14,
+      "premiumDiscount": "0.01%",
+      "premiumDiscountValue": 0.01,
       "distributions": {
         "frequency": "Quarterly",
         "exDate": "09/29/2026",
@@ -447,16 +447,16 @@
         "cagr5y": null,
         "cagr10y": null,
         "siAnn": 21.37,
-        "dividendYield": 0.93,
-        "dividendYieldText": "0.93%",
+        "dividendYield": 0.92,
+        "dividendYieldText": "0.92%",
         "secYield": null,
         "secYieldText": "—",
         "dividendYieldBasis": "computed-trailing-12m",
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-09-30"
       },
-      "holdings": 510,
-      "history": 378
+      "holdings": 505,
+      "history": 383
     },
     {
       "ticker": "HLTH",
@@ -470,17 +470,17 @@
       "terValue": 0.75,
       "terGross": "—",
       "terGrossValue": null,
-      "nav": "$29.61",
-      "navValue": 29.61,
+      "nav": "$28.63",
+      "navValue": 28.63,
       "aum": "—",
       "aumValue": null,
-      "asOfDate": "Oct 02 2026",
+      "asOfDate": "Oct 09 2026",
       "inceptionDate": "Jul 20 2026",
       "exchange": "NASDAQ",
-      "closePrice": "$29.68",
-      "closePriceValue": 29.68,
-      "premiumDiscount": "0.23%",
-      "premiumDiscountValue": 0.23,
+      "closePrice": "$28.72",
+      "closePriceValue": 28.72,
+      "premiumDiscount": "0.31%",
+      "premiumDiscountValue": 0.31,
       "distributions": {
         "frequency": "Unknown",
         "exDate": null,
@@ -545,7 +545,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 33,
-      "history": 53
+      "history": 58
     },
     {
       "ticker": "HRTS",
@@ -559,15 +559,15 @@
       "terValue": null,
       "terGross": "—",
       "terGrossValue": null,
-      "nav": "$35.80",
-      "navValue": 35.8,
-      "aum": "$52,982,351",
-      "aumValue": 52982351,
-      "asOfDate": "Oct 02 2026",
+      "nav": "$36.22",
+      "navValue": 36.22,
+      "aum": "$53,600,222",
+      "aumValue": 53600222,
+      "asOfDate": "Oct 09 2026",
       "inceptionDate": "Nov 20 2023",
       "exchange": "Nasdaq",
-      "closePrice": "$35.80",
-      "closePriceValue": 35.8,
+      "closePrice": "$36.22",
+      "closePriceValue": 36.22,
       "premiumDiscount": "0.01%",
       "premiumDiscountValue": 0.01,
       "distributions": {
@@ -625,8 +625,8 @@
         "cagr5y": null,
         "cagr10y": null,
         "siAnn": 12.58,
-        "dividendYield": 1.32,
-        "dividendYieldText": "1.32%",
+        "dividendYield": 1.31,
+        "dividendYieldText": "1.31%",
         "secYield": null,
         "secYieldText": "—",
         "dividendYieldBasis": "computed-trailing-12m",
@@ -634,7 +634,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 46,
-      "history": 718
+      "history": 723
     },
     {
       "ticker": "LAZR",
@@ -648,17 +648,17 @@
       "terValue": 0.75,
       "terGross": "—",
       "terGrossValue": null,
-      "nav": "$47.76",
-      "navValue": 47.76,
-      "aum": "$117,966,175",
-      "aumValue": 117966175,
-      "asOfDate": "Oct 02 2026",
+      "nav": "$44.86",
+      "navValue": 44.86,
+      "aum": "$137,270,425",
+      "aumValue": 137270425,
+      "asOfDate": "Oct 09 2026",
       "inceptionDate": "Jun 29 2026",
       "exchange": "NYSE",
-      "closePrice": "$48.28",
-      "closePriceValue": 48.28,
-      "premiumDiscount": "1.09%",
-      "premiumDiscountValue": 1.09,
+      "closePrice": "$45.02",
+      "closePriceValue": 45.02,
+      "premiumDiscount": "0.36%",
+      "premiumDiscountValue": 0.36,
       "distributions": {
         "frequency": "Unknown",
         "exDate": null,
@@ -723,7 +723,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 26,
-      "history": 67
+      "history": 72
     },
     {
       "ticker": "NASA",
@@ -737,17 +737,17 @@
       "terValue": 0.75,
       "terGross": "—",
       "terGrossValue": null,
-      "nav": "$24.95",
-      "navValue": 24.95,
-      "aum": "$1,187,495,903",
-      "aumValue": 1187495903,
-      "asOfDate": "Oct 02 2026",
+      "nav": "$24.15",
+      "navValue": 24.15,
+      "aum": "$1,148,428,147",
+      "aumValue": 1148428147,
+      "asOfDate": "Oct 09 2026",
       "inceptionDate": "Mar 30 2026",
       "exchange": "NYSE",
-      "closePrice": "$25.00",
-      "closePriceValue": 25,
-      "premiumDiscount": "0.21%",
-      "premiumDiscountValue": 0.21,
+      "closePrice": "$24.10",
+      "closePriceValue": 24.1,
+      "premiumDiscount": "-0.22%",
+      "premiumDiscountValue": -0.22,
       "distributions": {
         "frequency": "Unknown",
         "exDate": null,
@@ -812,7 +812,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 36,
-      "history": 129
+      "history": 134
     },
     {
       "ticker": "PRVT",
@@ -915,17 +915,17 @@
       "terValue": 0.75,
       "terGross": "—",
       "terGrossValue": null,
-      "nav": "$50.01",
-      "navValue": 50.01,
-      "aum": "$5,001,310",
-      "aumValue": 5001310,
-      "asOfDate": "Oct 02 2026",
+      "nav": "$49.05",
+      "navValue": 49.05,
+      "aum": "$4,904,542",
+      "aumValue": 4904542,
+      "asOfDate": "Oct 09 2026",
       "inceptionDate": "Aug 14 2026",
       "exchange": "CBOE BZX Exchange",
-      "closePrice": "$50.76",
-      "closePriceValue": 50.76,
-      "premiumDiscount": "1.50%",
-      "premiumDiscountValue": 1.5,
+      "closePrice": "$48.84",
+      "closePriceValue": 48.84,
+      "premiumDiscount": "-0.41%",
+      "premiumDiscountValue": -0.41,
       "distributions": {
         "frequency": "Unknown",
         "exDate": null,
@@ -990,7 +990,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 22,
-      "history": 34
+      "history": 39
     },
     {
       "ticker": "TOLL",
@@ -1004,17 +1004,17 @@
       "terValue": 0.55,
       "terGross": "—",
       "terGrossValue": null,
-      "nav": "$41.45",
-      "navValue": 41.45,
-      "aum": "$49,738,146",
-      "aumValue": 49738146,
-      "asOfDate": "Oct 02 2026",
+      "nav": "$41.66",
+      "navValue": 41.66,
+      "aum": "$47,494,051",
+      "aumValue": 47494051,
+      "asOfDate": "Oct 09 2026",
       "inceptionDate": "May 10 2023",
       "exchange": "CBOE BZX Exchange",
-      "closePrice": "$41.47",
-      "closePriceValue": 41.47,
-      "premiumDiscount": "0.05%",
-      "premiumDiscountValue": 0.05,
+      "closePrice": "$41.65",
+      "closePriceValue": 41.65,
+      "premiumDiscount": "-0.02%",
+      "premiumDiscountValue": -0.02,
       "distributions": {
         "frequency": "Annually",
         "exDate": "12/10/2025",
@@ -1078,8 +1078,8 @@
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-09-30"
       },
-      "holdings": 39,
-      "history": 852
+      "holdings": 37,
+      "history": 857
     },
     {
       "ticker": "VOLT",
@@ -1093,17 +1093,17 @@
       "terValue": 0.75,
       "terGross": "—",
       "terGrossValue": null,
-      "nav": "$36.69",
-      "navValue": 36.69,
-      "aum": "$752,215,563",
-      "aumValue": 752215563,
-      "asOfDate": "Oct 02 2026",
+      "nav": "$36.54",
+      "navValue": 36.54,
+      "aum": "$749,083,582",
+      "aumValue": 749083582,
+      "asOfDate": "Oct 09 2026",
       "inceptionDate": "Dec 03 2024",
       "exchange": "Nasdaq",
-      "closePrice": "$36.73",
-      "closePriceValue": 36.73,
-      "premiumDiscount": "0.10%",
-      "premiumDiscountValue": 0.1,
+      "closePrice": "$36.56",
+      "closePriceValue": 36.56,
+      "premiumDiscount": "0.05%",
+      "premiumDiscountValue": 0.05,
       "distributions": {
         "frequency": "Unknown",
         "exDate": "12/10/2025",
@@ -1168,7 +1168,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 27,
-      "history": 457
+      "history": 462
     },
     {
       "ticker": "WELD",
@@ -1182,17 +1182,17 @@
       "terValue": 0.75,
       "terGross": "—",
       "terGrossValue": null,
-      "nav": "$55.24",
-      "navValue": 55.24,
-      "aum": "$280,616,492",
-      "aumValue": 280616492,
-      "asOfDate": "Oct 02 2026",
+      "nav": "$53.66",
+      "navValue": 53.66,
+      "aum": "$272,597,680",
+      "aumValue": 272597680,
+      "asOfDate": "Oct 09 2026",
       "inceptionDate": "May 10 2023",
       "exchange": "NYSE",
-      "closePrice": "$55.18",
-      "closePriceValue": 55.18,
-      "premiumDiscount": "-0.12%",
-      "premiumDiscountValue": -0.12,
+      "closePrice": "$53.63",
+      "closePriceValue": 53.63,
+      "premiumDiscount": "-0.06%",
+      "premiumDiscountValue": -0.06,
       "distributions": {
         "frequency": "Annually",
         "exDate": "12/10/2025",
@@ -1257,7 +1257,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 23,
-      "history": 852
+      "history": 857
     }
   ]
 }

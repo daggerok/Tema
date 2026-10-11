@@ -2,7 +2,7 @@
   "ticker": "DICE",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 18,
+  "totalRows": 23,
   "headers": [
     "Date",
     "NAV",
@@ -116,6 +116,36 @@
       "Date": "Oct 02 2026",
       "NAV": "",
       "Market Price": "24.08",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 05 2026",
+      "NAV": "",
+      "Market Price": "24.379999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 06 2026",
+      "NAV": "",
+      "Market Price": "24.379999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 07 2026",
+      "NAV": "",
+      "Market Price": "23.790001",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 08 2026",
+      "NAV": "",
+      "Market Price": "23.700001",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 09 2026",
+      "NAV": "",
+      "Market Price": "24.280001",
       "Premium/Discount": ""
     }
   ]
