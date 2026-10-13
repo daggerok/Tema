@@ -9,7 +9,7 @@ import {
   createNportResolver, createPacedHttpClient, createProviderHttpClients, createRequestGate, decodeTemaCsv, deriveTemaMetrics,
   edgarSeriesFilingsUrl, fillNportTickers, filterFundFromIndex, findTemaHoldingsCsvUrl, indexFundFromMeta, installSystemCa,
   isCertError, isRetryableHttpStatus, isoFromDateLabel, minimalIndexFund, normalizeTemaDate, nportBelongsToTema,
-  nportIsNewerThanPublished, nportSeriesMatchesFund, nportUrlFor, outputPrintConfig, parseCompanyTickerMap, parseCsv,
+  nportIsNewerThanPublished, nportSeriesMatchesFund, nportUrlFor, printUpdaterConfig, parseCompanyTickerMap, parseCsv,
   parseEdgarAtomFilings, parseNport, parseNportAccessions, parseTemaCatalog, parseTemaFundPage, parseTemaFundTickerTable,
   parseTemaHoldingsCsv, parseYahooChart, passesFundFilters, passesRange, passesStaticFundFilters, readUpdaterConfig,
   resolveControls, resolveTemaNportSeriesRef, responseText, retryDelayMilliseconds, runUpdater, runtimeControls,
@@ -213,7 +213,7 @@ describe('controls', () => {
     expect(resolveControls(configFile, { SEC_UA: 'adv' }, { SEC_UA: 'in' }, { SEC_UA: 'protected' }).SEC_UA).toBe('protected');
     const lines: string[] = [];
     console.log = (...values: unknown[]) => { lines.push(values.map(String).join(' ')); };
-    outputPrintConfig('Tema ETFs', readUpdaterConfig({}));
+    printUpdaterConfig(readUpdaterConfig({}));
     expect(lines.join('\n')).toContain('[ config   ] Tema ETFs updater:');
     expect(lines.join('\n')).not.toContain('gmail.com');
   });
