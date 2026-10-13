@@ -2,7 +2,7 @@
   "ticker": "TOLL",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 857,
+  "totalRows": 858,
   "headers": [
     "Date",
     "NAV",
@@ -5150,6 +5150,12 @@
       "Date": "Oct 09 2026",
       "NAV": "",
       "Market Price": "41.653",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 12 2026",
+      "NAV": "",
+      "Market Price": "40.860001",
       "Premium/Discount": ""
     }
   ]

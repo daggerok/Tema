@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-11T02:23:57Z",
-  "catalogReadAt": "2026-10-11T02:23:57Z",
+  "generatedAt": "2026-10-13T02:28:46Z",
+  "catalogReadAt": "2026-10-13T02:28:46Z",
   "source": {
     "catalog": "https://temaetfs.com/funds",
     "holdings": "Tema ETFs official fund pages and daily HubSpot CSVs",
@@ -9,8 +9,8 @@
   },
   "counts": {
     "funds": 14,
-    "holdings": 935,
-    "history": 4744
+    "holdings": 936,
+    "history": 4757
   },
   "funds": [
     {
@@ -100,7 +100,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 35,
-      "history": 262
+      "history": 263
     },
     {
       "ticker": "CANC",
@@ -189,7 +189,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 58,
-      "history": 793
+      "history": 794
     },
     {
       "ticker": "DICE",
@@ -278,7 +278,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 39,
-      "history": 23
+      "history": 24
     },
     {
       "ticker": "DISK",
@@ -367,7 +367,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 18,
-      "history": 72
+      "history": 73
     },
     {
       "ticker": "DSPY",
@@ -456,7 +456,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 505,
-      "history": 383
+      "history": 384
     },
     {
       "ticker": "HLTH",
@@ -545,7 +545,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 33,
-      "history": 58
+      "history": 59
     },
     {
       "ticker": "HRTS",
@@ -625,8 +625,8 @@
         "cagr5y": null,
         "cagr10y": null,
         "siAnn": 12.58,
-        "dividendYield": 1.31,
-        "dividendYieldText": "1.31%",
+        "dividendYield": 1.3,
+        "dividendYieldText": "1.30%",
         "secYield": null,
         "secYieldText": "—",
         "dividendYieldBasis": "computed-trailing-12m",
@@ -634,7 +634,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 46,
-      "history": 723
+      "history": 724
     },
     {
       "ticker": "LAZR",
@@ -723,7 +723,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 26,
-      "history": 72
+      "history": 73
     },
     {
       "ticker": "NASA",
@@ -811,8 +811,8 @@
         "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
         "performanceAsOf": "2026-09-30"
       },
-      "holdings": 36,
-      "history": 134
+      "holdings": 37,
+      "history": 135
     },
     {
       "ticker": "PRVT",
@@ -990,7 +990,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 22,
-      "history": 39
+      "history": 40
     },
     {
       "ticker": "TOLL",
@@ -1070,8 +1070,8 @@
         "cagr5y": null,
         "cagr10y": null,
         "siAnn": 16.55,
-        "dividendYield": 0.27,
-        "dividendYieldText": "0.27%",
+        "dividendYield": 0.28,
+        "dividendYieldText": "0.28%",
         "secYield": null,
         "secYieldText": "—",
         "dividendYieldBasis": "computed-trailing-12m",
@@ -1079,7 +1079,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 37,
-      "history": 857
+      "history": 858
     },
     {
       "ticker": "VOLT",
@@ -1168,7 +1168,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 27,
-      "history": 462
+      "history": 463
     },
     {
       "ticker": "WELD",
@@ -1248,8 +1248,8 @@
         "cagr5y": null,
         "cagr10y": null,
         "siAnn": 25.4,
-        "dividendYield": 0.24,
-        "dividendYieldText": "0.24%",
+        "dividendYield": 0.25,
+        "dividendYieldText": "0.25%",
         "secYield": null,
         "secYieldText": "—",
         "dividendYieldBasis": "computed-trailing-12m",
@@ -1257,7 +1257,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 23,
-      "history": 857
+      "history": 858
     }
   ]
 }

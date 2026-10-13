@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-11T02:23:51Z",
+  "generatedAt": "2026-10-13T02:28:44Z",
   "ticker": "LAZR",
   "name": "LAZR Photonics & Optical ETF",
   "category": "Equity",
@@ -128,8 +128,8 @@
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 72,
-    "asOfDate": "2026-10-09",
+    "totalRows": 73,
+    "asOfDate": "2026-10-12",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

@@ -2,7 +2,7 @@
   "ticker": "NASA",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 134,
+  "totalRows": 135,
   "headers": [
     "Date",
     "NAV",
@@ -812,6 +812,12 @@
       "Date": "Oct 09 2026",
       "NAV": "",
       "Market Price": "24.1",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 12 2026",
+      "NAV": "",
+      "Market Price": "23.41",
       "Premium/Discount": ""
     }
   ]

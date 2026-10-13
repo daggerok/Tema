@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-11T02:23:49Z",
+  "generatedAt": "2026-10-13T02:28:43Z",
   "ticker": "HLTH",
   "name": "HLTH Healthcare AI ETF",
   "category": "Equity",
@@ -128,8 +128,8 @@
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 58,
-    "asOfDate": "2026-10-09",
+    "totalRows": 59,
+    "asOfDate": "2026-10-12",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

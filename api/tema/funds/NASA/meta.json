@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-11T02:23:52Z",
+  "generatedAt": "2026-10-13T02:28:44Z",
   "ticker": "NASA",
   "name": "NASA Space Innovators ETF",
   "category": "Equity",
@@ -119,7 +119,7 @@
       "holdings/001.json"
     ],
     "pageSize": 250,
-    "totalRows": 36,
+    "totalRows": 37,
     "asOfDate": "2026-10-09",
     "source": "Tema official daily holdings CSV (2026-10-09)"
   },
@@ -128,8 +128,8 @@
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 134,
-    "asOfDate": "2026-10-09",
+    "totalRows": 135,
+    "asOfDate": "2026-10-12",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

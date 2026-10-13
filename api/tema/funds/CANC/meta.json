@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-11T02:23:45Z",
+  "generatedAt": "2026-10-13T02:28:42Z",
   "ticker": "CANC",
   "name": "CANC Oncology ETF",
   "category": "Equity",
@@ -141,8 +141,8 @@
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 793,
-    "asOfDate": "2026-10-09",
+    "totalRows": 794,
+    "asOfDate": "2026-10-12",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }
