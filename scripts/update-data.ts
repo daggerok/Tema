@@ -2256,7 +2256,7 @@ export async function runUpdater(
   let updatedCount = 0;
   let skippedCount = 0;
   let failures = 0;
-  let deadlineNoted = false;
+  let notStartedAtDeadline = 0;
   let startedCount = 0;
 
   async function prepareFund(fund: TemaFund): Promise<PreparedFund> {
@@ -2379,8 +2379,8 @@ export async function runUpdater(
   async function worker(): Promise<void> {
     for (;;) {
       if (now() >= deadlineAt && queue.length) {
-        if (!deadlineNoted) console.log(`[ deadline ] soft run deadline reached; ${queue.length} funds not started keep their published state`);
-        deadlineNoted = true;
+        // reported once after the pool drains, so it never lands between fund lines
+        notStartedAtDeadline += queue.length;
         skippedCount += queue.length;
         queue.length = 0;
         return;
@@ -2460,9 +2460,12 @@ export async function runUpdater(
     holdings: numberOrNull(counts.holdings) ?? 0,
     history: numberOrNull(counts.history) ?? 0,
   };
+  if (notStartedAtDeadline) console.log(`[ deadline ] soft run deadline reached; ${notStartedAtDeadline} funds not started keep their published state`);
   console.log(output.summary(startedAt));
   console.log(outputCounts(catalog.length, summary.holdings, summary.history));
-  if (config.maxFetches === 0) console.log('[ cursor   ] full pass complete (cursor reset)');
+  // A TICKERS run never reads, writes or deletes the cursor (see the state handling above).
+  if (config.tickers.length) console.log('[ cursor   ] TICKERS run: cursor untouched');
+  else if (config.maxFetches === 0) console.log('[ cursor   ] full pass complete (cursor reset)');
   return summary;
 }
 

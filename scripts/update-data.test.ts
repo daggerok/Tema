@@ -608,8 +608,15 @@ describe('pipeline', () => {
       await runUpdater(feedConfig(directory, { MAX_FETCHES: '1', CONCURRENCY: '1' }), healthy(['AAA', 'BBB']));
       const statePath = join(directory, 'update-state.json');
       expect(JSON.parse(await readFile(statePath, 'utf8'))).toEqual({ cursor: 'AAA' });
+      const stateBefore = await readFile(statePath, 'utf8');
+      const lines: string[] = [];
+      console.log = (...values: unknown[]) => { lines.push(values.map(String).join(' ')); };
       await runUpdater(feedConfig(directory, { TICKERS: 'BBB' }), healthy(['AAA', 'BBB']));
-      expect(JSON.parse(await readFile(statePath, 'utf8'))).toEqual({ cursor: 'AAA' });
+      await runUpdater(feedConfig(directory, { TICKERS: 'BBB', MAX_FETCHES: '1' }), healthy(['AAA', 'BBB']));
+      expect(await readFile(statePath, 'utf8')).toBe(stateBefore);
+      expect(lines.filter((line) => line.startsWith('[ cursor   ] TICKERS run'))).toEqual(['[ cursor   ] TICKERS run: cursor untouched', '[ cursor   ] TICKERS run: cursor untouched']);
+      expect(lines.some((line) => line.includes('full pass complete'))).toBe(false);
+      console.log = () => undefined;
       await runUpdater(feedConfig(directory), healthy(['AAA', 'BBB']));
       expect(await readFile(statePath, 'utf8').catch(() => 'gone')).toBe('gone');
     });
@@ -623,6 +630,21 @@ describe('pipeline', () => {
       const summary = await runUpdater(feedConfig(directory), healthy(['AAA', 'BBB']), { deadlineMs: 0 });
       expect(summary).toMatchObject({ selectedCount: 2, updatedCount: 0, skippedCount: 2 });
       expect(await treeSnapshot(directory)).toBe(published);
+    });
+  });
+
+  test('the deadline line is printed once after the worker pool drains, right before the two done lines', async () => {
+    await withFeed(async (directory) => {
+      await runUpdater(feedConfig(directory), healthy(['AAA', 'BBB']));
+      const lines: string[] = [];
+      console.log = (...values: unknown[]) => { lines.push(values.map(String).join(' ')); };
+      let clock = 0;
+      await runUpdater(feedConfig(directory, { CONCURRENCY: '2' }), healthy(['AAA', 'BBB']), { deadlineMs: 1500, now: () => (clock += 1000) });
+      const deadline = lines.findIndex((line) => line.startsWith('[ deadline ]'));
+      expect(lines.filter((line) => line.startsWith('[ deadline ]'))).toEqual(['[ deadline ] soft run deadline reached; 1 funds not started keep their published state']);
+      expect(lines.findLastIndex((line) => /^\[\s*\d+\/\d+\s*\]/.test(line))).toBeLessThan(deadline);
+      expect(lines[deadline + 1]).toStartWith('[ done     ] ');
+      expect(lines[deadline + 2]).toStartWith('[ done     ] counts:');
     });
   });
 
