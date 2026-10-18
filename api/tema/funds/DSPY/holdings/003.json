@@ -2,7 +2,7 @@
   "ticker": "DSPY",
   "page": 3,
   "pageSize": 250,
-  "totalRows": 505,
+  "totalRows": 506,
   "headers": [
     "Name",
     "Ticker",
@@ -17,23 +17,11 @@
   ],
   "rows": [
     {
-      "Name": "HENRY SCHEIN INC",
-      "Ticker": "HSIC",
-      "Identifier": "806407102",
-      "Weight": "0.01",
-      "Market Value": "62077.51",
-      "Shares Held": "737",
-      "Asset Category": "Health Care",
-      "Country": "United States",
-      "Sector": "Health Care",
-      "Cash": "No"
-    },
-    {
       "Name": "ASSURANT INC",
       "Ticker": "AIZ",
       "Identifier": "04621X108",
       "Weight": "0.01",
-      "Market Value": "60979.01",
+      "Market Value": "64311.37",
       "Shares Held": "227",
       "Asset Category": "Financials",
       "Country": "United States",
@@ -41,11 +29,23 @@
       "Cash": "No"
     },
     {
+      "Name": "HENRY SCHEIN INC",
+      "Ticker": "HSIC",
+      "Identifier": "806407102",
+      "Weight": "0.01",
+      "Market Value": "63662.06",
+      "Shares Held": "737",
+      "Asset Category": "Health Care",
+      "Country": "United States",
+      "Sector": "Health Care",
+      "Cash": "No"
+    },
+    {
       "Name": "SKYDANCE CORP",
       "Ticker": "SKYD",
       "Identifier": "69932A204",
-      "Weight": "0.01",
-      "Market Value": "55335.56",
+      "Weight": "0",
+      "Market Value": "41743.31",
       "Shares Held": "6041",
       "Asset Category": "Communication Services",
       "Country": "United States",
@@ -57,11 +57,23 @@
       "Ticker": "DVA",
       "Identifier": "23918K108",
       "Weight": "0",
-      "Market Value": "28357.68",
+      "Market Value": "29220.36",
       "Shares Held": "156",
       "Asset Category": "Health Care",
       "Country": "United States",
       "Sector": "Health Care",
+      "Cash": "No"
+    },
+    {
+      "Name": "SKYDANCE CORP",
+      "Ticker": "SKYD/WS",
+      "Identifier": "69932A113",
+      "Weight": "0",
+      "Market Value": "17216.85",
+      "Shares Held": "6041",
+      "Asset Category": "Communication Services",
+      "Country": "United States",
+      "Sector": "Communication Services",
       "Cash": "No"
     },
     {
@@ -70,7 +82,7 @@
       "Identifier": "BBG01Y2F01K3",
       "Weight": "0",
       "Market Value": "0",
-      "Shares Held": "3333",
+      "Shares Held": "3327",
       "Asset Category": "Financials",
       "Country": "United States",
       "Sector": "Financials",

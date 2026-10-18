@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-13T02:28:45Z",
+  "generatedAt": "2026-10-18T01:41:06Z",
   "ticker": "PSOX",
   "name": "PSOX MLCC & PowerSemi ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/psox",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/PSOX-holdings-10092026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/PSOX-holdings-10162026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/PSOX",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-09)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-10-16)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$49.05",
-    "value": 49.05,
-    "asOfDate": "Oct 09 2026"
+    "display": "$42.15",
+    "value": 42.15,
+    "asOfDate": "Oct 16 2026"
   },
   "marketPrice": {
-    "display": "$48.84",
-    "value": 48.84,
-    "asOfDate": "Oct 09 2026"
+    "display": "$41.41",
+    "value": 41.41,
+    "asOfDate": "Oct 16 2026"
   },
   "premiumDiscount": {
-    "display": "-0.41%",
-    "value": -0.41
+    "display": "-1.76%",
+    "value": -1.76
   },
   "aum": {
-    "display": "$4,904,542",
-    "value": 4904542,
-    "asOfDate": "Oct 09 2026",
+    "display": "$3,372,058",
+    "value": 3372058,
+    "asOfDate": "Oct 16 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -120,16 +120,16 @@
     ],
     "pageSize": 250,
     "totalRows": 22,
-    "asOfDate": "2026-10-09",
-    "source": "Tema official daily holdings CSV (2026-10-09)"
+    "asOfDate": "2026-10-16",
+    "source": "Tema official daily holdings CSV (2026-10-16)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 40,
-    "asOfDate": "2026-10-12",
+    "totalRows": 44,
+    "asOfDate": "2026-10-16",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }
