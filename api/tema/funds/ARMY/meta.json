@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-18T01:40:57Z",
+  "generatedAt": "2026-10-20T04:30:54Z",
   "ticker": "ARMY",
   "name": "ARMY International Defense ETF",
   "category": "Equity",
@@ -128,8 +128,8 @@
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 267,
-    "asOfDate": "2026-10-16",
+    "totalRows": 268,
+    "asOfDate": "2026-10-19",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

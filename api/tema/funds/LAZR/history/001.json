@@ -2,7 +2,7 @@
   "ticker": "LAZR",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 77,
+  "totalRows": 78,
   "headers": [
     "Date",
     "NAV",
@@ -470,6 +470,12 @@
       "Date": "Oct 16 2026",
       "NAV": "",
       "Market Price": "36.41",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 19 2026",
+      "NAV": "",
+      "Market Price": "37.169998",
       "Premium/Discount": ""
     }
   ]

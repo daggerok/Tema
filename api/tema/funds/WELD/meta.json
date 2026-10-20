@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-18T01:41:10Z",
+  "generatedAt": "2026-10-20T04:31:06Z",
   "ticker": "WELD",
   "name": "WELD U.S. Manufacturing & Reshoring ETF",
   "category": "Equity",
@@ -141,8 +141,8 @@
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 862,
-    "asOfDate": "2026-10-16",
+    "totalRows": 863,
+    "asOfDate": "2026-10-19",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

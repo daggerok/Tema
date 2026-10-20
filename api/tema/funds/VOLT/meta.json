@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-18T01:41:09Z",
+  "generatedAt": "2026-10-20T04:31:04Z",
   "ticker": "VOLT",
   "name": "VOLT Electrification ETF",
   "category": "Equity",
@@ -137,8 +137,8 @@
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 467,
-    "asOfDate": "2026-10-16",
+    "totalRows": 468,
+    "asOfDate": "2026-10-19",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

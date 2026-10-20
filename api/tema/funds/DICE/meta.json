@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-18T01:40:58Z",
+  "generatedAt": "2026-10-20T04:30:55Z",
   "ticker": "DICE",
   "name": "DICE Trading & Prediction Markets ETF",
   "category": "Equity",
@@ -128,8 +128,8 @@
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 28,
-    "asOfDate": "2026-10-16",
+    "totalRows": 29,
+    "asOfDate": "2026-10-19",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

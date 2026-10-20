@@ -2,7 +2,7 @@
   "ticker": "VOLT",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 467,
+  "totalRows": 468,
   "headers": [
     "Date",
     "NAV",
@@ -2810,6 +2810,12 @@
       "Date": "Oct 16 2026",
       "NAV": "",
       "Market Price": "34.209999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 19 2026",
+      "NAV": "",
+      "Market Price": "34.049999",
       "Premium/Discount": ""
     }
   ]

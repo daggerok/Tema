@@ -2,7 +2,7 @@
   "ticker": "DSPY",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 388,
+  "totalRows": 389,
   "headers": [
     "Date",
     "NAV",
@@ -2336,6 +2336,12 @@
       "Date": "Oct 16 2026",
       "NAV": "",
       "Market Price": "66.042999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 19 2026",
+      "NAV": "",
+      "Market Price": "66.209",
       "Premium/Discount": ""
     }
   ]

@@ -2,7 +2,7 @@
   "ticker": "CANC",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 798,
+  "totalRows": 799,
   "headers": [
     "Date",
     "NAV",
@@ -4796,6 +4796,12 @@
       "Date": "Oct 16 2026",
       "NAV": "",
       "Market Price": "39.646999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 19 2026",
+      "NAV": "",
+      "Market Price": "40.014999",
       "Premium/Discount": ""
     }
   ]

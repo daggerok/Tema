@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-18T01:41:10Z",
-  "catalogReadAt": "2026-10-18T01:41:10Z",
+  "generatedAt": "2026-10-20T04:31:07Z",
+  "catalogReadAt": "2026-10-20T04:31:07Z",
   "source": {
     "catalog": "https://temaetfs.com/funds",
     "holdings": "Tema ETFs official fund pages and daily HubSpot CSVs",
@@ -10,7 +10,7 @@
   "counts": {
     "funds": 14,
     "holdings": 940,
-    "history": 4809
+    "history": 4822
   },
   "funds": [
     {
@@ -100,7 +100,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 35,
-      "history": 267
+      "history": 268
     },
     {
       "ticker": "CANC",
@@ -189,7 +189,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 59,
-      "history": 798
+      "history": 799
     },
     {
       "ticker": "DICE",
@@ -278,7 +278,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 39,
-      "history": 28
+      "history": 29
     },
     {
       "ticker": "DISK",
@@ -367,7 +367,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 18,
-      "history": 77
+      "history": 78
     },
     {
       "ticker": "DSPY",
@@ -447,8 +447,8 @@
         "cagr5y": null,
         "cagr10y": null,
         "siAnn": 21.37,
-        "dividendYield": 0.94,
-        "dividendYieldText": "0.94%",
+        "dividendYield": 0.93,
+        "dividendYieldText": "0.93%",
         "secYield": null,
         "secYieldText": "—",
         "dividendYieldBasis": "computed-trailing-12m",
@@ -456,7 +456,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 506,
-      "history": 388
+      "history": 389
     },
     {
       "ticker": "HLTH",
@@ -545,7 +545,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 33,
-      "history": 63
+      "history": 64
     },
     {
       "ticker": "HRTS",
@@ -634,7 +634,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 46,
-      "history": 728
+      "history": 729
     },
     {
       "ticker": "LAZR",
@@ -723,7 +723,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 26,
-      "history": 77
+      "history": 78
     },
     {
       "ticker": "NASA",
@@ -812,7 +812,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 38,
-      "history": 139
+      "history": 140
     },
     {
       "ticker": "PRVT",
@@ -990,7 +990,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 22,
-      "history": 44
+      "history": 45
     },
     {
       "ticker": "TOLL",
@@ -1079,7 +1079,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 38,
-      "history": 862
+      "history": 863
     },
     {
       "ticker": "VOLT",
@@ -1168,7 +1168,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 27,
-      "history": 467
+      "history": 468
     },
     {
       "ticker": "WELD",
@@ -1257,7 +1257,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 23,
-      "history": 862
+      "history": 863
     }
   ]
 }

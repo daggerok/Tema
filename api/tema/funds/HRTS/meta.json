@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-18T01:41:03Z",
+  "generatedAt": "2026-10-20T04:30:59Z",
   "ticker": "HRTS",
   "name": "HRTS Heart & Health ETF",
   "category": "Equity",
@@ -137,8 +137,8 @@
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 728,
-    "asOfDate": "2026-10-16",
+    "totalRows": 729,
+    "asOfDate": "2026-10-19",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }
