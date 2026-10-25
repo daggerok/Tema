@@ -13,7 +13,7 @@ import {
   parseEdgarAtomFilings, parseNport, parseNportAccessions, parseTemaCatalog, parseTemaFundPage, parseTemaFundTickerTable,
   parseTemaHoldingsCsv, parseYahooChart, passesFundFilters, passesRange, passesStaticFundFilters, readUpdaterConfig,
   resolveControls, resolveTemaNportSeriesRef, responseText, retryDelayMilliseconds, runUpdater, runtimeControls,
-  dividendYieldBasisFor, samePublishedContent, selectUpdateBatch, updaterHelpText, withReturnsContract, writeJsonIfChanged, yahooChartUrl,
+  dividendYieldBasisFor, samePublishedContent, selectUpdateBatch, updaterHelpText, withReturnsContract, writeJsonIfChanged, yahooChartUrl, holdingsGuard,
   yahooDistributionRows, yahooHistoryRows, buildTemaFundMeta, shiftIsoDate, allFundsFailed, retainCatalogEntries,
 } from './update-data.ts';
 
@@ -46,7 +46,7 @@ afterEach(() => {
 const holdingsFixture = `holdings_date,ticker,cusip,proper_name,shares,market_value,percent_of_nav,is_cash,country,sector
 2026-09-29,BELFB,077347300,BEL FUSE INC,199922,48804958.64,0.0671,0,United States,Information Technology
 2026-09-29,APH,032095101,AMPHENOL CORP,575893,48547779.9,0.0668,0,United States,Information Technology
-2026-09-29,ETN,G29183103,EATON CORP PLC,107327,46119485.17,0.0634,0,Ireland,Industrials
+2026-09-29,ETN,G29183103,EATON CORP PLC,107327,46119485.17,0.8661,0,Ireland,Industrials
 `;
 const fundPageFixture = `<h1>VOLT Tema Electrification ETF</h1>
 <div class="box"><div class="col-specification"><span>Ticker</span></div><div class="col-details">VOLT</div></div>
@@ -101,7 +101,7 @@ function issuerFor(tickers: string[], options: { ter?: string | null; down?: boo
 }
 
 function nportClient(reportDate: string) {
-  const xml = `<edgarSubmission><genInfo><regName>Tema ETF Trust</regName><regCik>0001944285</regCik><seriesName>Tema Electrification ETF</seriesName><seriesId>S000001</seriesId><repPdDate>${reportDate}</repPdDate></genInfo><formData><fundInfo><netAssets>1000.5</netAssets></fundInfo><invstOrSec><name>OLD CO</name><cusip>111111111</cusip><valUSD>10</valUSD><pctVal>5</pctVal><balance>3</balance><assetCat>EC</assetCat></invstOrSec></formData></edgarSubmission>`;
+  const xml = `<edgarSubmission><genInfo><regName>Tema ETF Trust</regName><regCik>0001944285</regCik><seriesName>Tema Electrification ETF</seriesName><seriesId>S000001</seriesId><repPdDate>${reportDate}</repPdDate></genInfo><formData><fundInfo><netAssets>1000.5</netAssets></fundInfo><invstOrSec><name>OLD CO</name><cusip>111111111</cusip><valUSD>10</valUSD><pctVal>100</pctVal><balance>3</balance><assetCat>EC</assetCat></invstOrSec></formData></edgarSubmission>`;
   return { fetch: async (input: string | URL) => {
     const url = String(input);
     if (url.includes('company_tickers_mf')) return okResponse(JSON.stringify({ fields: ['cik', 'seriesId', 'classId', 'symbol'], data: [[1944285, 'S000001', 'C000001', 'VOLT']] }), 'application/json');
@@ -333,6 +333,21 @@ describe('parsing', () => {
     expect(reordered.rows[0]).toMatchObject({ Name: 'CASH COLLATERAL', Ticker: '', Identifier: 'CASH', Weight: '-0.05', 'Market Value': '0', 'Shares Held': '-2', Cash: 'Yes' });
     expect(() => parseTemaHoldingsCsv('ticker,proper_name\nVOLT,Tema')).toThrow('missing required columns');
     expect(() => parseTemaHoldingsCsv(holdingsFixture.replaceAll('2026-09-29', 'not-a-date'))).toThrow('no valid holdings_date');
+  });
+
+  test('holdings guard: header-only, renamed weight column, broken weights, a bad weight sum and a halved sheet are rejected', () => {
+    const headers = ['Name', 'Ticker', 'Weight'];
+    const rows = [{ Name: 'A', Ticker: 'A', Weight: '60%' }, { Name: 'B', Ticker: 'B', Weight: '40%' }];
+    expect(holdingsGuard(headers, rows, 2)).toBeNull();
+    expect(holdingsGuard(headers, [['A', 'A', '60'], ['B', 'B', '40']], null)).toBeNull();
+    expect(holdingsGuard([], [], 0)).toBeNull(); // nothing published before: an empty sheet is honest
+    expect(holdingsGuard(headers, [], 505)).toContain('no holdings rows');
+    expect(holdingsGuard(['Name', 'Ticker', 'Wt'], rows, 2)).toContain('no weight column');
+    expect(holdingsGuard(headers, rows.map((row) => ({ ...row, Weight: '6\u200B0' })), 2)).toContain('numeric weight');
+    const allocation = [{ Name: 'Cash&Collateral', Ticker: '-', Weight: '100' }, { Name: 'Equities', Ticker: '-', Weight: '476' }];
+    expect(holdingsGuard(headers, allocation, 2)).toContain('outside 50..150');
+    expect(holdingsGuard(headers, allocation, 2, ['sum'])).toBeNull();
+    expect(holdingsGuard(headers, rows, 5)).toContain('less than half');
   });
 
   test('fund page: official details and price blocks, heading fallback, ticker mismatch is rejected', () => {
@@ -573,6 +588,20 @@ describe('pipeline', () => {
       await runUpdater(feedConfig(directory, { TICKERS: 'AAA' }), { issuer: issuerFor(tickers, { down: true }), yahoo: downClient, sec: downClient });
       expect((await readIndex(directory)).funds).toHaveLength(3);
       expect(await others()).toBe(before);
+    });
+  });
+
+  test('holdings that fail the guard keep the fund exactly as published and report it failed', async () => {
+    await withFeed(async (directory) => {
+      await runUpdater(feedConfig(directory, { TICKERS: 'VOLT' }), healthy(['VOLT']));
+      const published = await treeSnapshot(directory);
+      // non-numeric percent_of_nav cells: the CSV still parses, every Weight becomes ''
+      const blank = holdingsFixture.replace(/,0\.\d+,0,/g, ',n/a,0,');
+      const broken = { fetch: async (input: string | URL) => String(input).startsWith('https://temaetfs.com/hubfs/') ? okResponse(blank, 'text/csv') : issuerFor(['VOLT']).fetch(input) };
+      const summary = await runUpdater(feedConfig(directory, { TICKERS: 'VOLT' }), { issuer: broken, yahoo: yahooFor(dailyChart('2026-09-01', 29)), sec: downClient });
+      expect(summary).toMatchObject({ selectedCount: 1, updatedCount: 0, failures: 1, holdings: 3 });
+      expect(allFundsFailed(summary)).toBe(true);
+      expect(await treeSnapshot(directory)).toBe(published);
     });
   });
 
