@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-21T06:43:24Z",
+  "generatedAt": "2026-10-25T01:54:05Z",
   "ticker": "WELD",
   "name": "WELD U.S. Manufacturing & Reshoring ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/weld",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/WELD-holdings-10192026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/WELD-holdings-10222026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/WELD",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-19)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-10-22)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,28 +31,28 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$51.37",
-    "value": 51.37,
-    "asOfDate": "Oct 19 2026"
+    "display": "$49.45",
+    "value": 49.45,
+    "asOfDate": "Oct 22 2026"
   },
   "marketPrice": {
-    "display": "$51.34",
-    "value": 51.34,
-    "asOfDate": "Oct 19 2026"
+    "display": "$49.32",
+    "value": 49.32,
+    "asOfDate": "Oct 22 2026"
   },
   "premiumDiscount": {
-    "display": "-0.05%",
-    "value": -0.05
+    "display": "-0.26%",
+    "value": -0.26
   },
   "aum": {
-    "display": "$249,644,313",
-    "value": 249644313,
-    "asOfDate": "Oct 19 2026",
+    "display": "$240,327,293",
+    "value": 240327293,
+    "asOfDate": "Oct 22 2026",
     "source": "Tema official fund page"
   },
   "yields": {
-    "dividendYield": 0.26,
-    "dividendYieldText": "0.26%",
+    "dividendYield": 0.27,
+    "dividendYieldText": "0.27%",
     "dividendYieldBasis": "computed-trailing-12m",
     "dividendYieldKind": "Trailing 12-month Yahoo Finance chart distributions divided by latest market price",
     "distributionRate": null,
@@ -133,16 +133,16 @@
     ],
     "pageSize": 250,
     "totalRows": 23,
-    "asOfDate": "2026-10-19",
-    "source": "Tema official daily holdings CSV (2026-10-19)"
+    "asOfDate": "2026-10-22",
+    "source": "Tema official daily holdings CSV (2026-10-22)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 864,
-    "asOfDate": "2026-10-20",
+    "totalRows": 867,
+    "asOfDate": "2026-10-23",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

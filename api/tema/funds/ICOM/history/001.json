@@ -1,0 +1,26 @@
+{
+  "ticker": "ICOM",
+  "page": 1,
+  "pageSize": 1000,
+  "totalRows": 2,
+  "headers": [
+    "Date",
+    "NAV",
+    "Market Price",
+    "Premium/Discount"
+  ],
+  "rows": [
+    {
+      "Date": "Oct 22 2026",
+      "NAV": "",
+      "Market Price": "24.68",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 23 2026",
+      "NAV": "",
+      "Market Price": "24.91",
+      "Premium/Discount": ""
+    }
+  ]
+}

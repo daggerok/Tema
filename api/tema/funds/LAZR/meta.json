@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-21T06:43:19Z",
+  "generatedAt": "2026-10-25T01:53:59Z",
   "ticker": "LAZR",
   "name": "LAZR Photonics & Optical ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/lazr",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/LAZR-holdings-10192026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/LAZR-holdings-10222026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/LAZR",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-19)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-10-22)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$36.98",
-    "value": 36.98,
-    "asOfDate": "Oct 19 2026"
+    "display": "$33.72",
+    "value": 33.72,
+    "asOfDate": "Oct 22 2026"
   },
   "marketPrice": {
-    "display": "$37.17",
-    "value": 37.17,
-    "asOfDate": "Oct 19 2026"
+    "display": "$33.44",
+    "value": 33.44,
+    "asOfDate": "Oct 22 2026"
   },
   "premiumDiscount": {
-    "display": "0.50%",
-    "value": 0.5
+    "display": "-0.83%",
+    "value": -0.83
   },
   "aum": {
-    "display": "$186,767,503",
-    "value": 186767503,
-    "asOfDate": "Oct 19 2026",
+    "display": "$179,725,825",
+    "value": 179725825,
+    "asOfDate": "Oct 22 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -119,17 +119,17 @@
       "holdings/001.json"
     ],
     "pageSize": 250,
-    "totalRows": 26,
-    "asOfDate": "2026-10-19",
-    "source": "Tema official daily holdings CSV (2026-10-19)"
+    "totalRows": 25,
+    "asOfDate": "2026-10-22",
+    "source": "Tema official daily holdings CSV (2026-10-22)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 79,
-    "asOfDate": "2026-10-20",
+    "totalRows": 82,
+    "asOfDate": "2026-10-23",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

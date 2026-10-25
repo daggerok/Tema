@@ -2,7 +2,7 @@
   "ticker": "DSPY",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 390,
+  "totalRows": 393,
   "headers": [
     "Date",
     "NAV",
@@ -2348,6 +2348,24 @@
       "Date": "Oct 20 2026",
       "NAV": "",
       "Market Price": "66.459999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 21 2026",
+      "NAV": "",
+      "Market Price": "66.945",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 22 2026",
+      "NAV": "",
+      "Market Price": "66.371002",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 23 2026",
+      "NAV": "",
+      "Market Price": "65.980003",
       "Premium/Discount": ""
     }
   ]
