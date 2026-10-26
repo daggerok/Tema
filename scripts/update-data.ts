@@ -2259,6 +2259,12 @@ export async function runUpdater(
     return companyTickerMapPromise;
   };
 
+  /** The previous index row of a fund that has published data; a catalog-only row (dataFile null) is never read back as published state. */
+  const publishedRow = (ticker: string): Record<string, unknown> | undefined => {
+    const row = previousByTicker.get(ticker);
+    return row && typeof row.dataFile === 'string' ? row : undefined;
+  };
+
   const output = outputCreateReporter(config.outputDir, selected.length);
   const queue = selected.map(fund => ({ fund }));
   const updated = new Map<string, Record<string, unknown>>();
@@ -2383,9 +2389,10 @@ export async function runUpdater(
     if (config.skipYahoo) carryPreviousSections(meta, previousMeta, ['returns', 'yields', 'distributions']);
     else preservePreviousDividendFrequency(meta, previousMeta, chart);
     reconcileFreshSources(meta, { holdings, history, nport });
-    const indexRow = candidateIndexRow(fund, meta, previousByTicker.get(fund.ticker));
+    const indexRow = candidateIndexRow(fund, meta, publishedRow(fund.ticker));
     const freshSource = page !== null || holdings !== null || history !== null || (chart !== null && chart.dividends.length > 0);
-    const hasPrevious = previousByTicker.has(fund.ticker) || Object.keys(previousMeta).length > 0;
+    // A catalog-only row (dataFile null, written for a new fund no source answered) is no published state: such a fund still fails.
+    const hasPrevious = publishedRow(fund.ticker) !== undefined || Object.keys(previousMeta).length > 0;
     return { page, holdings, history, chart, derived, nport, freshSource, missing, hasPrevious, meta, indexRow };
   }
 
@@ -2407,10 +2414,11 @@ export async function runUpdater(
         const prepared = await prepareFund(fund);
         if (!prepared.freshSource || (prepared.missing.length && prepared.hasPrevious)) {
           // Fund-level consistency: every fund is either fully updated or fully kept from before.
-          skippedCount += 1;
+          // A new fund no source answered is failed (counted once): it keeps its catalog-only row and gets no funds/<T>/ files.
           const reason = prepared.freshSource ? `${prepared.missing.join(', ')} unavailable; previous state kept` : 'all providers unavailable; previous data retained';
-          await output.result(fund.ticker, before, prepared.hasPrevious ? 'skipped' : 'failed', prepared.hasPrevious ? reason : 'no source data available');
-          if (!prepared.hasPrevious) failures += 1;
+          await output.result(fund.ticker, before, prepared.hasPrevious ? 'skipped' : 'failed', prepared.hasPrevious ? reason : 'no source answered; no data published for this fund yet');
+          if (prepared.hasPrevious) skippedCount += 1;
+          else failures += 1;
           continue;
         }
         if (!fundFilterPasses(prepared.indexRow, config)) {
@@ -2419,7 +2427,7 @@ export async function runUpdater(
           continue;
         }
         const meta = await writePreparedFund(config.outputDir, fund, prepared, config);
-        const row = candidateIndexRow(fund, meta, previousByTicker.get(fund.ticker));
+        const row = candidateIndexRow(fund, meta, publishedRow(fund.ticker));
         updated.set(fund.ticker, row);
         updatedCount += 1;
         await output.result(fund.ticker, before, undefined, undefined, { ...row, distributions: meta.distributions });
