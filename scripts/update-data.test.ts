@@ -617,6 +617,8 @@ describe('pipeline 2', () => {
     const entry = { ticker: 'BBB', closed: '2026-10-01', source: 'https://www.sec.gov/Archives/edgar/data/1944285/notice.htm' };
     expect(() => closedFund([{ ...entry, closed: 'soon' }], 'BBB')).toThrow('CLOSED_FUNDS');
     expect(closedFund([entry], 'bbb')).toEqual(entry);
+    // TEMA-1: PRVT was liquidated (last trading day 2026-09-02), so it is closed, not a fund the N-PORT gate keeps frozen
+    expect(closedFund(CLOSED_FUNDS, 'PRVT')?.closed).toBe('2026-09-02');
     await withFeed(async (directory) => {
       await runUpdater(feedConfig(directory), healthy(['AAA', 'BBB', 'CCC']));
       const firstRows = (await readIndex(directory)).funds;
@@ -762,6 +764,17 @@ describe('pipeline 3', () => {
       const meta = await readMeta(directory, 'VOLT');
       expect(meta.holdings.source).toContain('N-PORT');
       expect(meta.holdings.totalRows).toBe(1);
+    });
+  });
+  test('N-PORT freshness compares only the holdings date: a newer filing replaces N-PORT holdings although NAV and page dates are later', async () => {
+    await withFeed(async (directory) => {
+      // the page (as of Sep 29 2026) and Yahoo are up, the CSV link is gone: the fund is published from the 2026-05-31 N-PORT
+      const csvGone = (reportDate: string) => ({ issuer: issuerFor(['VOLT'], { csvGone: true }), yahoo: yahooFor(dailyChart('2026-09-01', 29)), sec: nportClient(reportDate) });
+      expect(await runUpdater(feedConfig(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'true' }), csvGone('2026-05-31'))).toMatchObject({ updatedCount: 1, failures: 0 });
+      expect((await readMeta(directory, 'VOLT')).holdings.asOfDate).toBe('2026-05-31');
+      // TEMA-1: the 2026-08-31 filing is newer than those holdings, so it must replace them (the NAV and page dates are not holdings dates)
+      expect(await runUpdater(feedConfig(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'true' }), csvGone('2026-08-31'))).toMatchObject({ updatedCount: 1, failures: 0 });
+      expect((await readMeta(directory, 'VOLT')).holdings.asOfDate).toBe('2026-08-31');
     });
   });
 });

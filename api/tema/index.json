@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-25T01:54:05Z",
-  "catalogReadAt": "2026-10-25T01:54:05Z",
+  "generatedAt": "2026-10-26T05:18:33Z",
+  "catalogReadAt": "2026-10-26T05:18:33Z",
   "source": {
     "catalog": "https://temaetfs.com/funds",
     "holdings": "Tema ETFs official fund pages and daily HubSpot CSVs",
@@ -990,7 +990,10 @@
         "performanceAsOf": "2026-08-31"
       },
       "holdings": 30,
-      "history": 9
+      "history": 9,
+      "status": "closed",
+      "closedDate": "2026-09-02",
+      "closedSource": "https://www.sec.gov/Archives/edgar/data/1944285/000182912626008372/temaetftrust_497.htm"
     },
     {
       "ticker": "PSOX",
