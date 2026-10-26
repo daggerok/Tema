@@ -40,7 +40,10 @@ const HOLDINGS_HEADERS = [
 /** Funds whose holdings legitimately fail a holdingsGuard check (geared, futures, look-through, top-N lists): ticker, or '*' for every fund -> relaxed checks. */
 const HOLDINGS_GUARD_RELAX: Record<string, string[]> = {};
 /** Funds the issuer closed, each confirmed from an SEC filing or the issuer notice (`source`): never fetched or guarded, last published data kept, index row marked closed. */
-export const CLOSED_FUNDS: ClosedFund[] = [];
+export const CLOSED_FUNDS: ClosedFund[] = [
+  // liquidated: last trading day on Cboe BZX 2026-09-02, liquidation payment on or about 2026-09-04 (497 supplement of 2026-08-05; Form 25 filed 2026-08-24)
+  { ticker: 'PRVT', closed: '2026-09-02', source: 'https://www.sec.gov/Archives/edgar/data/1944285/000182912626008372/temaetftrust_497.htm' },
+];
 
 function decodeHtmlEntities(value: string): string {
   return value
@@ -2145,7 +2148,7 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** An N-PORT snapshot may fill holdings only when it is strictly newer than what is already published. */
+/** An N-PORT snapshot may fill holdings only when it is strictly newer than the published holdings. Callers pass only the holdings date: a NAV or page date is always newer than a quarterly filing and froze funds whose holdings came from N-PORT. */
 export function nportIsNewerThanPublished(reportDate: string, ...publishedDates: unknown[]): boolean {
   const reported = normalizeTemaDate(reportDate);
   if (!reported) return false;
@@ -2307,7 +2310,7 @@ export async function runUpdater(
         const match = await nportResolver({ ticker: fund.ticker, name: page?.name || fund.name });
         if (match?.report.holdings.length && !nportBelongsToTema(match.report)) {
           outputNote(`[ edgar    ] ${fund.ticker}: N-PORT registrant ${match.report.regCik} is not the Tema ETF Trust; ignored`);
-        } else if (match?.report.holdings.length && !nportIsNewerThanPublished(match.report.reportDate, previousHoldings?.asOfDate, previousMeta.nav && recordOf(previousMeta.nav).asOfDate, page?.asOfDate)) {
+        } else if (match?.report.holdings.length && !nportIsNewerThanPublished(match.report.reportDate, previousHoldings?.asOfDate)) {
           outputNote(`[ edgar    ] ${fund.ticker}: N-PORT report ${match.report.reportDate} is not newer than the published data; ignored`);
         } else if (match?.report.holdings.length) {
           nport = match;
