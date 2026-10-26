@@ -5,16 +5,16 @@ import { mkdtemp, readFile, readdir, rm, stat, utimes } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  type FetchFunction, CLOSED_FUNDS, CONTROL_NAMES, RETURNS_BASIS, closedFund, SEC_COMPANY_TICKERS_MF_URL, SEC_SUBMISSIONS_URL, SOFT_DEADLINE_MS,
-  createNportResolver, createPacedHttpClient, createProviderHttpClients, createRequestGate, decodeTemaCsv, deriveTemaMetrics,
-  edgarSeriesFilingsUrl, fillNportTickers, filterFundFromIndex, findTemaHoldingsCsvUrl, indexFundFromMeta, installSystemCa,
-  isCertError, isRetryableHttpStatus, isoFromDateLabel, minimalIndexFund, normalizeTemaDate, nportBelongsToTema,
-  nportIsNewerThanPublished, nportSeriesMatchesFund, nportUrlFor, printUpdaterConfig, parseCompanyTickerMap, parseCsv,
-  parseEdgarAtomFilings, parseNport, parseNportAccessions, parseTemaCatalog, parseTemaFundPage, parseTemaFundTickerTable,
-  parseTemaHoldingsCsv, parseYahooChart, passesFundFilters, passesRange, passesStaticFundFilters, readUpdaterConfig,
-  resolveControls, resolveTemaNportSeriesRef, responseText, retryDelayMilliseconds, runUpdater, runtimeControls,
-  dividendYieldBasisFor, samePublishedContent, selectUpdateBatch, updaterHelpText, withReturnsContract, writeJsonIfChanged, yahooChartUrl, holdingsGuard,
-  yahooDistributionRows, yahooHistoryRows, buildTemaFundMeta, shiftIsoDate, allFundsFailed, retainCatalogEntries,
+  type FetchFunction, CLOSED_FUNDS, CONTROL_NAMES, HOLDINGS_GUARD_RELAX, RETURNS_BASIS, closedFund, SEC_COMPANY_TICKERS_MF_URL, SOFT_DEADLINE_MS,
+  createPacedHttpClient, createProviderHttpClients, createRequestGate, decodeTemaCsv, deriveTemaMetrics,
+  filterFundFromIndex, findTemaHoldingsCsvUrl, holdingsWeightCount, indexFundFromMeta, installSystemCa,
+  isCertError, isRetryableHttpStatus, isoFromDateLabel, minimalIndexFund, normalizeTemaDate, nportIsFresh, nportTickers,
+  printUpdaterConfig, parseCsv, parseNportFiling, parseSecCompanyNames, parseSecFundTickers,
+  parseTemaCatalog, parseTemaFundPage, parseTemaHoldingsCsv, parseYahooChart, passesFundFilters, passesRange, passesStaticFundFilters,
+  readTemaNport, readUpdaterConfig, resetSecState, resolveControls, responseText, retryDelayMilliseconds, runUpdater, runtimeControls,
+  dividendYieldBasisFor, samePublishedContent, selectUpdateBatch, temaNportRows, temaSeriesName, updaterHelpText, withReturnsContract,
+  writeJsonIfChanged, yahooChartUrl, holdingsGuard, yahooDistributionRows, yahooHistoryRows, buildTemaFundMeta, shiftIsoDate, allFundsFailed,
+  retainCatalogEntries,
 } from './update-data.ts';
 
 // ---------------------------------------------------------------------------
@@ -81,33 +81,56 @@ function dailyChart(startIso: string, days: number, dividends: Record<string, { 
   }] } };
 }
 
-function temaPage(ticker: string, ter: string | null = '0.75%'): string {
-  let html = fundPageFixture.replace(/VOLT/g, ticker);
+/** A chart whose adjusted closes follow Yahoo: each distribution multiplies every earlier day by 1 - amount / close of the day before its ex-date. */
+function adjustedChart(startIso: string, days: number, dividends: Array<[number, number]>) {
+  const payload = dailyChart(startIso, days);
+  const result = payload.chart.result[0];
+  const close = result.indicators.quote[0].close;
+  result.indicators.adjclose[0].adjclose = close.map((value, index) => dividends.reduce((adjusted, [at, amount]) => (at > index ? adjusted * (1 - amount / close[at - 1]) : adjusted), value));
+  result.events.dividends = Object.fromEntries(dividends.map(([at, amount]) => [String(result.timestamp[at]), { date: result.timestamp[at], amount }]));
+  return payload;
+}
+
+/** The last `days` of a chart, as Yahoo answers a period1 window (the distributions inside it only). */
+function windowOf(payload: ReturnType<typeof adjustedChart>, days: number) {
+  const result = payload.chart.result[0];
+  const from = result.timestamp[result.timestamp.length - days];
+  return { chart: { result: [{
+    ...result,
+    timestamp: result.timestamp.slice(-days),
+    indicators: { quote: [{ close: result.indicators.quote[0].close.slice(-days) }], adjclose: [{ adjclose: result.indicators.adjclose[0].adjclose.slice(-days) }] },
+    events: { dividends: Object.fromEntries(Object.entries(result.events.dividends).filter(([, event]) => event.date >= from)) },
+  }] } };
+}
+
+function temaPage(ticker: string, ter: string | null = '0.75%', inception = '12/03/24'): string {
+  let html = fundPageFixture.replace(/VOLT/g, ticker).replace('12/03/24', inception);
   if (ter === null) html = html.replace(/<div class="box"><div class="col-specification"><span>Total Expense Ratio<\/span><\/div><div class="col-details">0\.75%<\/div><\/div>\n/, '');
   return `${html}<a href="${csvUrlFor(ticker)}">Download Holdings (CSV)</a>`;
 }
 
-function issuerFor(tickers: string[], options: { ter?: string | null; down?: boolean; csvGone?: boolean } = {}) {
+function issuerFor(tickers: string[], options: { ter?: string | null; down?: boolean; csvGone?: boolean; inception?: string } = {}) {
   const catalog = tickers.map((ticker) => `<a href="https://temaetfs.com/${ticker.toLowerCase()}">${ticker} Tema ETF</a>`).join('');
   return { fetch: async (input: string | URL) => {
     const url = String(input);
     if (url === 'https://temaetfs.com/funds') return okResponse(catalog);
     if (options.down) return new Response('unavailable', { status: 503 });
     const ticker = tickers.find((item) => url === `https://temaetfs.com/${item.toLowerCase()}`);
-    if (ticker) return okResponse(temaPage(ticker, options.ter));
+    if (ticker) return okResponse(temaPage(ticker, options.ter, options.inception));
     if (url.startsWith('https://temaetfs.com/hubfs/')) return options.csvGone ? new Response('gone', { status: 404 }) : okResponse(holdingsFixture, 'text/csv');
     return new Response('not found', { status: 404 });
   } };
 }
 
 function nportClient(reportDate: string) {
-  const xml = `<edgarSubmission><genInfo><regName>Tema ETF Trust</regName><regCik>0001944285</regCik><seriesName>Tema Electrification ETF</seriesName><seriesId>S000001</seriesId><repPdDate>${reportDate}</repPdDate></genInfo><formData><fundInfo><netAssets>1000.5</netAssets></fundInfo><invstOrSec><name>OLD CO</name><cusip>111111111</cusip><valUSD>10</valUSD><pctVal>100</pctVal><balance>3</balance><assetCat>EC</assetCat></invstOrSec></formData></edgarSubmission>`;
+  const xml = `<edgarSubmission><genInfo><regName>Tema ETF Trust</regName><regCik>0001944285</regCik><seriesName>Tema Electrification ETF</seriesName><seriesId>S000088946</seriesId><repPdDate>${reportDate}</repPdDate></genInfo><formData><fundInfo><netAssets>1000.5</netAssets></fundInfo><invstOrSec><name>OLD CO</name><cusip>111111111</cusip><valUSD>10</valUSD><pctVal>100</pctVal><balance>3</balance><assetCat>EC</assetCat></invstOrSec></formData></edgarSubmission>`;
   return { fetch: async (input: string | URL) => {
     const url = String(input);
-    if (url.includes('company_tickers_mf')) return okResponse(JSON.stringify({ fields: ['cik', 'seriesId', 'classId', 'symbol'], data: [[1944285, 'S000001', 'C000001', 'VOLT']] }), 'application/json');
-    if (url.includes('submissions')) return okResponse(JSON.stringify({ cik: '1944285', filings: { recent: { form: ['NPORT-P'], accessionNumber: ['0001-26-000001'], filingDate: ['2026-07-30'], reportDate: [reportDate] } } }), 'application/json');
+    if (url.includes('company_tickers_mf')) return okResponse(JSON.stringify({ fields: ['cik', 'seriesId', 'classId', 'symbol'], data: [[1944285, 'S000088946', 'C000259059', 'VOLT']] }), 'application/json');
+    if (url.includes('submissions')) return okResponse(JSON.stringify({ cik: '1944285', filings: { recent: { form: ['NPORT-P'], accessionNumber: ['0001193125-26-000001'], filingDate: ['2026-07-30'], reportDate: [reportDate] } } }), 'application/json');
+    if (url.includes('browse-edgar')) return okResponse('<feed><entry><content><filing-type>NPORT-P</filing-type><accession-number>0001193125-26-000001</accession-number><filing-date>2026-07-30</filing-date><filing-href>https://www.sec.gov/Archives/edgar/data/1944285/000119312526000001/0001193125-26-000001-index.htm</filing-href></content></entry></feed>', 'application/atom+xml');
     if (url.includes('primary_doc')) return okResponse(xml, 'text/xml');
-    if (url.includes('company_tickers')) return okResponse('{}', 'application/json');
+    if (url.includes('company_tickers')) return okResponse(JSON.stringify({ 0: { ticker: 'OLDC', title: 'Old Co' } }), 'application/json');
     return new Response('not found', { status: 404 });
   } };
 }
@@ -389,60 +412,58 @@ describe('parsing 2', () => {
     expect(yahooDistributionRows(chart)).toEqual([['09/01/2026', '0.125']]);
   });
 
-  test('N-PORT: Tema-only ticker table, recent accessions and Atom feed, XML positions with issuer tickers', () => {
-    const payload = { fields: ['symbol', 'classId', 'seriesId', 'cik'], data: [['VOLT', 'C000239058', 'S000088946', 1944285], ['OTHER', 'C000000001', 'S000000001', 1234567]] };
-    expect(parseTemaFundTickerTable(payload).get('VOLT')).toEqual({ cik: '0001944285', seriesId: 'S000088946', classId: 'C000239058' });
-    expect(parseTemaFundTickerTable(payload).has('OTHER')).toBe(false);
-    const filings = parseNportAccessions({ cik: '0001944285', filings: { recent: {
-      form: ['NPORT-P', 'N-1A'], accessionNumber: ['0001944285-26-000123', '0001944285-26-000124'], filingDate: ['2026-09-29', '2026-09-30'], reportDate: ['2026-08-31', ''],
-    } } });
-    expect(filings).toEqual([{ accession: '0001944285-26-000123', filed: '2026-09-29', reportDate: '2026-08-31', url: 'https://www.sec.gov/Archives/edgar/data/1944285/000194428526000123/primary_doc.xml' }]);
-    expect(nportUrlFor('0001944285', '0001944285-26-000123')).toBe(filings[0].url);
-    const atom = '<feed><entry><filing-type>NPORT-P</filing-type><accession-number>0001944285-26-000123</accession-number><filing-date>2026-09-29</filing-date><period>2026-08-31</period><filing-href>https://www.sec.gov/Archives/edgar/data/1944285/000194428526000123/index.htm</filing-href></entry></feed>';
-    expect(parseEdgarAtomFilings(atom)[0].url).toBe(filings[0].url);
-    expect(new URL(edgarSeriesFilingsUrl('S000088946')).searchParams.get('type')).toBe('NPORT-P');
-    const xml = '<edgarSubmission><genInfo><regName>Tema ETF Trust</regName><regCik>0001944285</regCik><seriesName>VOLT ETF</seriesName><seriesId>S000088946</seriesId><repPdDate>2026-08-31</repPdDate></genInfo><fundInfo><netAssets>1000000</netAssets></fundInfo><invstOrSec><name>Example Public Company Inc</name><cusip>123456789</cusip><pctVal>12.5</pctVal><valUSD>125000</valUSD><balance>1000</balance><assetCat>EC</assetCat></invstOrSec><invstOrSec><name>Cash Collateral</name><pctVal>1.5</pctVal><valUSD>15000</valUSD><balance>15000</balance><assetCat>STIV</assetCat></invstOrSec></edgarSubmission>';
-    const parsed = parseNport(xml);
-    expect(parsed).toMatchObject({ regName: 'Tema ETF Trust', regCik: '0001944285', seriesId: 'S000088946', reportDate: '2026-08-31', netAssets: 1_000_000 });
-    expect(parsed.holdings).toHaveLength(2);
-    expect(parsed.holdings[0]).toMatchObject({ Name: 'Example Public Company Inc', Identifier: '123456789', Weight: '12.5', 'Market Value': '125000', 'Shares Held': '1000' });
-    expect(fillNportTickers(parsed.holdings, parseCompanyTickerMap({ '0': { ticker: 'EXM', title: 'Example Public Company Inc' } }))[0].Ticker).toBe('EXM');
+  test('dates: month-name, U.S. and compact dates are the same calendar day in every time zone', () => {
+    for (const tz of ['Asia/Tokyo', 'America/Los_Angeles', 'UTC']) {
+      process.env.TZ = tz;
+      expect(['Oct 24, 2026', 'October 24 2026', '24 Oct 2026', '10/24/2026', '10/24/26', '2026-10-24', '10242026'].map((raw) => normalizeTemaDate(raw))).toEqual(Array(7).fill('2026-10-24'));
+      expect(normalizeTemaDate('not a date')).toBe('');
+    }
   });
 
-  test('N-PORT series resolver: WELD aliases the legacy RSHO series, the scan is recent-first and cached', async () => {
-    const mapping = new Map([
-      ['RSHO', { cik: '0001944285', seriesId: 'S000WELD', classId: 'C0001' }],
-      ['PRVT', { cik: '0001944285', seriesId: 'S000PRVT', classId: 'C0002' }],
-    ]);
-    expect(resolveTemaNportSeriesRef('WELD', mapping)?.seriesId).toBe('S000WELD');
-    expect(resolveTemaNportSeriesRef('DICE', mapping)).toBeNull();
-    const series = (seriesName: string) => ({ regName: '', regCik: '', seriesName, seriesId: '', reportDate: '', holdings: [], netAssets: null });
-    expect(nportSeriesMatchesFund(series('DICE Trading & Prediction Markets ETF'), 'DICE', 'Tema DICE Trading and Prediction Markets ETF')).toBe(true);
-    expect(nportSeriesMatchesFund(series('CANC Cancer Immunotherapy ETF'), 'DICE', 'Tema DICE Trading and Prediction Markets ETF')).toBe(false);
+  test('SEC EDGAR fallback (shared nport-reader): ticker map, N-PORT sheet with empty missing numbers, no derivative identifiers, tickers only for U.S. equities', () => {
+    const map = parseSecFundTickers({ fields: ['cik', 'seriesId', 'classId', 'symbol'], data: [[1944285, 'S000088946', 'C000259059', 'VOLT'], [1944285, 'S000078298', 'C000239058', 'RSHO']] });
+    expect(map.get('VOLT')).toEqual({ cik: '0001944285', seriesId: 'S000088946', classId: 'C000259059' });
+    const xml = `<edgarSubmission><genInfo><seriesName>Tema Electrification ETF</seriesName><seriesId>S000088946</seriesId><repPdDate>2026-05-31</repPdDate></genInfo><fundInfo><netAssets>734149760.5</netAssets></fundInfo>
+<invstOrSecs><invstOrSec><name>MERCK &amp; CO INC</name><cusip>58933Y105</cusip><identifiers><isin value="US58933Y1055"/></identifiers><balance>37710468.00000000</balance><curCd>USD</curCd><valUSD>5541249108.24</valUSD><pctVal>4.91</pctVal><assetCat>EC</assetCat></invstOrSec>
+<invstOrSec><name>UNITED STATES TREASURY NOTE</name><cusip>91282CJL6</cusip><identifiers><ticker value="T"/></identifiers><balance>1000000</balance><curCd>USD</curCd><valUSD>990000</valUSD><assetCat>DBT</assetCat><debtSec><maturityDt>2028-01-31</maturityDt><annualizedRt>3.5</annualizedRt></debtSec></invstOrSec>
+<invstOrSec><name>DJIA MINI E-CBOT</name><cusip>000000000</cusip><identifiers><other otherDesc="Bloomberg Identifier" value="BBG01VKPGXL9"/></identifiers><curCd>USD</curCd><valUSD>4913771.74</valUSD><pctVal>0.005</pctVal><assetCat>DE</assetCat><derivativeInfo><futrDeriv derivCat="FUT"><descRefInstrmnt><otherRefInst><identifiers><cusip value="78462F103"/><ticker value="SPY"/></identifiers></otherRefInst></descRefInstrmnt></futrDeriv></derivativeInfo></invstOrSec></invstOrSecs></edgarSubmission>`;
+    const filing = parseNportFiling(xml);
+    expect([filing.seriesId, filing.repPdDate, filing.netAssets, filing.positions.length]).toEqual(['S000088946', '2026-05-31', 734_149_760.5, 3]);
+    const rows = temaNportRows(filing, nportTickers(filing.positions, parseSecCompanyNames({ 0: { ticker: 'MRK', title: 'Merck & Co., Inc.' }, 1: { ticker: 'T', title: 'AT&T INC.' } })));
+    expect(rows[0]).toEqual({ Name: 'MERCK & CO INC', Ticker: 'MRK', Identifier: '58933Y105', Weight: '4.91', 'Market Value': '5541249108.24', 'Shares Held': '37710468', 'Asset Category': 'EC', Country: '', Sector: '', Cash: '' });
+    // the Treasury note keeps no ticker (a bond is no "T" for AT&T) and an empty weight, never 0; the future keeps its own id, not SPY's
+    expect(rows.slice(1).map((row) => [row.Ticker, row.Identifier, row.Weight])).toEqual([['', '91282CJL6', ''], ['', 'BBG01VKPGXL9', '0.005']]);
+  });
 
-    const filings = [
-      { accession: '0001944285-26-000003', filingDate: '2026-07-29', seriesId: 'S000OTHER', seriesName: 'Tema Legacy ETF' },
-      { accession: '0001944285-26-000002', filingDate: '2026-07-28', seriesId: 'S000WELD', seriesName: 'Tema Weld Industries ETF' },
-      { accession: '0001944285-26-000001', filingDate: '2026-07-27', seriesId: 'S000PRVT', seriesName: 'Tema Private Markets ETF' },
-    ];
+  test('N-PORT identity: WELD reads the series SEC still lists as RSHO, a fund with no series id is matched by its Tema series name', async () => {
+    expect([temaSeriesName('DICE', 'DICE Trading & Prediction Markets ETF'), temaSeriesName('ICOM', 'Tema Commodity Income ETF')]).toEqual(['Tema Trading & Prediction Markets ETF', 'Tema Commodity Income ETF']);
+    const doc = (seriesId: string, seriesName: string) => `<edgarSubmission><genInfo><seriesName>${seriesName}</seriesName><seriesId>${seriesId}</seriesId><repPdDate>2026-05-31</repPdDate></genInfo><invstOrSec><name>A CO</name><cusip>111111111</cusip><pctVal>100</pctVal><assetCat>EC</assetCat></invstOrSec></edgarSubmission>`;
+    const filings: Record<string, string> = {
+      '000119312526000003': doc('S000078299', 'Tema Oncology ETF'),
+      '000119312526000002': doc('S000078298', 'Tema U.S. Manufacturing & Reshoring ETF'),
+      '000119312526000001': doc('S000999999', 'Tema Trading & Prediction Markets ETF'),
+    };
+    const accessions = ['0001193125-26-000003', '0001193125-26-000002', '0001193125-26-000001'];
     const json = (payload: unknown) => new Response(JSON.stringify(payload), { status: 200, headers: { 'content-type': 'application/json' } });
-    const archiveCalls: string[] = [];
+    const urls: string[] = [];
     const fetchImpl: FetchFunction = async (input) => {
       const url = String(input);
-      if (url === SEC_COMPANY_TICKERS_MF_URL) return json({ fields: ['symbol', 'cik', 'seriesId', 'classId'], data: [['RSHO', '1944285', 'S000WELD', 'C0001'], ['PRVT', '1944285', 'S000PRVT', 'C0002']] });
-      if (url === SEC_SUBMISSIONS_URL) return json({ cik: 1944285, filings: { recent: {
-        form: filings.map(() => 'NPORT-P'), accessionNumber: filings.map((f) => f.accession), filingDate: filings.map((f) => f.filingDate), reportDate: filings.map(() => '2026-05-31'),
-      } } });
-      const filing = filings.find((value) => url.includes(value.accession.replace(/-/g, '')));
-      if (!filing) return new Response('missing fixture', { status: 404 });
-      archiveCalls.push(filing.accession);
-      return new Response(`<edgarSubmission><genInfo><regName>Tema ETF Trust</regName><regCik>0001944285</regCik><seriesName>${filing.seriesName}</seriesName><seriesId>${filing.seriesId}</seriesId><repPdDate>2026-05-31</repPdDate></genInfo><fundInfo><netAssets>1000000</netAssets></fundInfo></edgarSubmission>`, { status: 200, headers: { 'content-type': 'text/xml' } });
+      urls.push(url);
+      if (url === SEC_COMPANY_TICKERS_MF_URL) return json({ fields: ['cik', 'seriesId', 'classId', 'symbol'], data: [[1944285, 'S000078298', 'C000239058', 'RSHO'], [1944285, 'S000078299', 'C000239059', 'CANC']] });
+      if (url.includes('/submissions/CIK0001944285.json')) return json({ cik: '1944285', filings: { recent: { form: accessions.map(() => 'NPORT-P'), accessionNumber: accessions, filingDate: accessions.map(() => '2026-07-29'), reportDate: accessions.map(() => '2026-05-31') } } });
+      if (url.includes('browse-edgar') && url.includes('S000078298')) return new Response(`<feed><entry><filing-type>NPORT-P</filing-type><accession-number>${accessions[1]}</accession-number><filing-date>2026-07-29</filing-date><filing-href>https://www.sec.gov/Archives/edgar/data/1944285/000119312526000002/index.htm</filing-href></entry></feed>`, { status: 200 });
+      const folder = Object.keys(filings).find((key) => url.includes(`/1944285/${key}/primary_doc.xml`));
+      return folder ? new Response(filings[folder], { status: 200 }) : new Response('missing', { status: 404 });
     };
-    const resolve = createNportResolver(createPacedHttpClient({ gate: { pace: async () => undefined }, retries: 0, userAgent: 'test', fetchImpl }), { concurrency: 2, maxDocuments: 10 });
-    expect((await resolve({ ticker: 'WELD', name: 'Tema Weld Industries ETF' }))?.report.seriesId).toBe('S000WELD');
-    expect(archiveCalls).toEqual([filings[0].accession, filings[1].accession]);
-    expect((await resolve({ ticker: 'WELD', name: 'Tema Weld Industries ETF' }))?.accession.accession).toBe(filings[1].accession);
-    expect((await resolve({ ticker: 'PRVT', name: 'Tema Private Markets ETF' }))?.report.seriesId).toBe('S000PRVT');
+    const client = createPacedHttpClient({ gate: { pace: async () => undefined }, retries: 0, userAgent: 'test', fetchImpl });
+    resetSecState();
+    const weld = await readTemaNport({ ticker: 'WELD', name: 'WELD U.S. Manufacturing & Reshoring ETF' }, null, client);
+    expect('filing' in weld ? [weld.filing.seriesId, weld.candidate.accession] : weld).toEqual(['S000078298', accessions[1]]);
+    expect(urls.some((url) => url.includes('browse-edgar') && url.includes('CIK=S000078298'))).toBe(true);
+    const dice = await readTemaNport({ ticker: 'DICE', name: 'DICE Trading & Prediction Markets ETF' }, { asOfDate: '2026-10-22', totalRows: 39 }, client);
+    expect(dice).toEqual({ problem: 'DICE: N-PORT 2026-05-31 is not newer than the published holdings (2026-10-22)' });
+    const fresh = await readTemaNport({ ticker: 'DICE', name: 'DICE Trading & Prediction Markets ETF' }, null, client);
+    expect('filing' in fresh ? fresh.filing.seriesName : fresh).toBe('Tema Trading & Prediction Markets ETF');
   });
 });
 
@@ -487,6 +508,14 @@ describe('metrics', () => {
 });
 
 describe('metrics 2', () => {
+  test('a fund younger than one year publishes no 1y, 3y or since-inception return, whatever the history reaches back to', async () => {
+    await withFeed(async (directory) => {
+      await runUpdater(feedConfig(directory, { TICKERS: 'VOLT' }), { issuer: issuerFor(['VOLT'], { inception: '06/01/26' }), yahoo: yahooFor(dailyChart('2023-01-01', 1370)), sec: downClient });
+      const row = (await readIndex(directory)).funds[0];
+      expect([row.metrics.ytd === null, row.metrics.tr1y, row.metrics.cagr3y, row.metrics.siAnn, row.returns.monthEnd.yr1, row.metrics.performanceAsOf]).toEqual([false, null, null, null, null, '2026-09-30']);
+    });
+  });
+
   test('dividendYieldBasis: computed-trailing-12m exactly when the yield exists, null otherwise, kept with the yield on every row kind', () => {
     const fund = { ticker: 'NEW', name: 'New ETF', fundPage: 'https://temaetfs.com/new' };
     const day = (date: string, close: number) => ({ date, close, adjClose: close, volume: 1 });
@@ -677,7 +706,7 @@ describe('pipeline 2', () => {
     await withFeed(async (directory) => {
       await runUpdater(feedConfig(directory), healthy(['AAA']));
       const before = await treeSnapshot(directory);
-      await expect(runUpdater(feedConfig(directory, { TICKERS: 'AAA NOPE' }), healthy(['AAA']))).rejects.toThrow('Unknown TICKERS (not in the Tema catalog): NOPE');
+      await expect(runUpdater(feedConfig(directory, { TICKERS: 'AAA NOPE' }), healthy(['AAA']))).rejects.toThrow('TICKERS: NOPE not in the Tema catalog or published feed; nothing was fetched or written');
       expect(await treeSnapshot(directory)).toBe(before);
     });
   });
@@ -766,12 +795,12 @@ describe('pipeline 3', () => {
   });
 
   test('N-PORT freshness: an older filing never replaces published holdings, a newer one fills a fund without data', async () => {
-    expect(nportIsNewerThanPublished('2026-05-31', '2026-09-30')).toBe(false);
-    expect(nportIsNewerThanPublished('2026-09-30', 'Sep 30 2026')).toBe(false);
-    expect(nportIsNewerThanPublished('2026-12-31', 'Sep 30 2026', '', undefined)).toBe(true);
-    expect(nportIsNewerThanPublished('2026-05-31')).toBe(true);
-    expect(nportIsNewerThanPublished('not a date', '2020-01-01')).toBe(false);
-    expect([nportBelongsToTema({ regCik: '0001944285' }), nportBelongsToTema({ regCik: '0000000123' })]).toEqual([true, false]);
+    expect(nportIsFresh('2026-05-31', '2026-09-30', 28)).toBe(false);
+    expect(nportIsFresh('2026-09-30', '2026-09-30', 28)).toBe(false);
+    expect(nportIsFresh('2026-12-31', '2026-09-30', 28)).toBe(true);
+    expect(nportIsFresh('', '2026-03-31', 100)).toBe(false);
+    expect(nportIsFresh('2026-05-31', null, 0)).toBe(true);
+    expect(nportIsFresh('2026-05-31', null, 100)).toBe(false); // published rows without a date cannot be compared: keep them
     await withFeed(async (directory) => {
       await runUpdater(feedConfig(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'true' }), healthy(['VOLT']));
       const published = await treeSnapshot(directory);
@@ -791,6 +820,7 @@ describe('pipeline 3', () => {
       const meta = await readMeta(directory, 'VOLT');
       expect(meta.holdings.source).toContain('N-PORT');
       expect(meta.holdings.totalRows).toBe(1);
+      expect(JSON.parse(await readFile(join(directory, 'funds', 'VOLT', 'holdings', '001.json'), 'utf8')).rows[0]).toMatchObject({ Name: 'OLD CO', Ticker: 'OLDC', Identifier: '111111111', Weight: '100', 'Shares Held': '3' });
     });
   });
   test('N-PORT freshness compares only the holdings date: a newer filing replaces N-PORT holdings although NAV and page dates are later', async () => {
@@ -807,16 +837,17 @@ describe('pipeline 3', () => {
 });
 
 describe('pipeline 4', () => {
-  test('a shorter HISTORY_RANGE drops long-horizon returns instead of keeping old values under the new date', async () => {
+  test('a HISTORY_RANGE run after a full run keeps the older history and its adjusted returns and writes nothing (Q25)', async () => {
     await withFeed(async (directory) => {
-      const run = (chart: unknown, env: Record<string, string>) => runUpdater(feedConfig(directory, { TICKERS: 'VOLT', ...env }), { issuer: issuerFor(['VOLT']), yahoo: yahooFor(chart), sec: downClient });
-      await run(dailyChart('2023-01-01', 1370), {});
-      const longRow = (await readIndex(directory)).funds[0];
-      expect(longRow.metrics.tr3y).not.toBeNull();
-      await run(dailyChart('2025-10-01', 365), { HISTORY_RANGE: '1y' });
-      const row = (await readIndex(directory)).funds[0];
-      expect([row.metrics.tr3y, row.metrics.cagr3y, row.returns.monthEnd.yr3, row.metrics.tr1y]).toEqual([null, null, null, null]);
-      expect(row.metrics.performanceAsOf).toBe(longRow.metrics.performanceAsOf);
+      // Yahoo-style adjusted closes: a distribution before the window lowers every earlier adjusted close
+      const full = adjustedChart('2023-01-01', 1370, [[200, 0.5], [900, 0.4], [1300, 0.3]]);
+      const run = (chart: unknown, env: Record<string, string>) => runUpdater(feedConfig(directory, { TICKERS: 'VOLT', ...env }), { issuer: issuerFor(['VOLT'], { inception: '01/01/23' }), yahoo: yahooFor(chart), sec: downClient });
+      await run(full, {});
+      const published = await treeSnapshot(directory);
+      expect((await readIndex(directory)).funds[0].metrics.cagr3y).not.toBeNull();
+      expect(await run(windowOf(full, 365), { HISTORY_RANGE: '1y' })).toMatchObject({ updatedCount: 1, failures: 0 });
+      expect(await treeSnapshot(directory)).toBe(published);
+      expect((await readMeta(directory, 'VOLT')).history.totalRows).toBe(1370);
     });
   });
 
@@ -861,6 +892,66 @@ describe('pipeline 4', () => {
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
+  });
+});
+
+describe('pipeline 5', () => {
+  test('a relaxed guard still keeps numeric published weights from an all-blank sheet (Q24)', async () => {
+    await withFeed(async (directory) => {
+      await runUpdater(feedConfig(directory, { TICKERS: 'VOLT' }), healthy(['VOLT']));
+      const published = await treeSnapshot(directory);
+      const blank = holdingsFixture.replace(/,0\.\d+,0,/g, ',n/a,0,');
+      const broken = { fetch: async (input: string | URL) => String(input).startsWith('https://temaetfs.com/hubfs/') ? okResponse(blank, 'text/csv') : issuerFor(['VOLT']).fetch(input) };
+      HOLDINGS_GUARD_RELAX.VOLT = ['numeric', 'sum'];
+      try {
+        expect(await runUpdater(feedConfig(directory, { TICKERS: 'VOLT' }), { issuer: broken, yahoo: yahooFor(dailyChart('2026-09-01', 29)), sec: downClient })).toMatchObject({ updatedCount: 0, failures: 1 });
+      } finally {
+        delete HOLDINGS_GUARD_RELAX.VOLT;
+      }
+      expect(await treeSnapshot(directory)).toBe(published);
+      expect(holdingsWeightCount(['Name', 'Weight'], [['A', '-'], ['B', '2']])).toBe(1);
+    });
+  });
+
+  test('TICKERS outside the live catalog stops the run before any fund request; a stale catalog-only row is dropped (Q27)', async () => {
+    await withFeed(async (directory) => {
+      await runUpdater(feedConfig(directory), healthy(['AAA']));
+      const index = await readIndex(directory);
+      index.funds.push(minimalIndexFund({ ticker: 'NOPE', name: 'NOPE', fundPage: 'https://temaetfs.com/nope' }));
+      await writeJsonIfChanged(join(directory, 'index.json'), index);
+      const before = await treeSnapshot(directory);
+      const urls: string[] = [];
+      const issuer = { fetch: async (input: string | URL) => { urls.push(String(input)); return issuerFor(['AAA']).fetch(input); } };
+      await expect(runUpdater(feedConfig(directory, { TICKERS: 'NOPE' }), { issuer, yahoo: yahooFor(dailyChart('2026-09-01', 29), urls), sec: downClient })).rejects.toThrow('TICKERS: NOPE not in the Tema catalog or published feed');
+      expect(urls).toEqual(['https://temaetfs.com/funds']);
+      expect(await treeSnapshot(directory)).toBe(before);
+      await runUpdater(feedConfig(directory), healthy(['AAA']));
+      expect((await readIndex(directory)).funds.map((row: { ticker: string }) => row.ticker)).toEqual(['AAA']);
+    });
+  });
+
+  test('NEW FUNDS announces a fund on its first successful publish, a failed new fund as not published yet (Q28)', async () => {
+    await withFeed(async (directory) => {
+      await runUpdater(feedConfig(directory), healthy(['AAA']));
+      const tickers = ['AAA', 'BBB', 'CCC'];
+      const base = healthy(tickers);
+      const cccDown = {
+        issuer: { fetch: async (input: string | URL) => (/\/ccc$/.test(String(input)) ? new Response('down', { status: 503 }) : base.issuer.fetch(input)) },
+        yahoo: { fetch: async (input: string | URL) => (String(input).includes('/chart/CCC') ? new Response('down', { status: 503 }) : base.yahoo.fetch(input)) },
+        sec: downClient,
+      };
+      process.env.GITHUB_STEP_SUMMARY = join(directory, 'summary.md');
+      const lines: string[] = [];
+      console.log = (line: unknown) => { if (/^NEW FUNDS/.test(String(line))) lines.push(String(line)); };
+      await runUpdater(feedConfig(directory), cccDown);
+      expect(lines).toEqual(['NEW FUNDS: BBB', 'NEW FUNDS (not published yet): CCC']);
+      expect(readFileSync(join(directory, 'summary.md'), 'utf8')).toBe('### NEW FUNDS\n\nNEW FUNDS: BBB\nNEW FUNDS (not published yet): CCC\n');
+      lines.length = 0;
+      await runUpdater(feedConfig(directory), cccDown);
+      expect(lines).toEqual([]);
+      await runUpdater(feedConfig(directory), base);
+      expect(lines).toEqual(['NEW FUNDS: CCC']);
+    });
   });
 });
 
