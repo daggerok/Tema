@@ -1,6 +1,6 @@
 /// <reference types="bun" />
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { mkdtemp, readFile, readdir, rm, stat, utimes } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -698,6 +698,33 @@ describe('pipeline 2', () => {
       console.log = () => undefined;
       await runUpdater(feedConfig(directory), healthy(['AAA', 'BBB']));
       expect(await readFile(statePath, 'utf8').catch(() => 'gone')).toBe('gone');
+    });
+  });
+
+  test('a new fund no source answered is failed with a catalog-only row and no files; that row is never read back as published data', async () => {
+    await withFeed(async (directory) => {
+      await runUpdater(feedConfig(directory), healthy(['AAA']));
+      const tickers = ['AAA', 'NEWF'];
+      const row = async (ticker: string) => (await readIndex(directory)).funds.find((item: { ticker: string }) => item.ticker === ticker);
+      // fund page and Yahoo down, then SKIP_YAHOO with no N-PORT-P; each twice: the second run reads the first run's catalog-only row
+      const silent: Array<[Record<string, string>, Parameters<typeof runUpdater>[1]]> = [
+        [{}, { issuer: issuerFor(tickers, { down: true }), yahoo: downClient, sec: downClient }],
+        [{ SKIP_YAHOO: 'true', EDGAR_FALLBACK: 'true' }, { issuer: issuerFor(tickers, { down: true }), yahoo: yahooFor(dailyChart('2026-09-01', 29)), sec: downClient }],
+      ];
+      for (const [extra, clients] of silent) for (const _run of [1, 2]) {
+        expect(await runUpdater(feedConfig(directory, { TICKERS: 'NEWF', ...extra }), clients)).toMatchObject({ selectedCount: 1, updatedCount: 0, skippedCount: 0, failures: 1 });
+        expect(await row('NEWF')).toMatchObject({ dataFile: null, holdings: 0, history: 0 });
+        expect(Object.keys((await row('NEWF')).metrics)).toEqual(Object.keys((await row('AAA')).metrics));
+        expect(existsSync(join(directory, 'funds', 'NEWF'))).toBe(false);
+      }
+      // an older catalog-only row with placeholders: the first good refresh projects its row from the new meta.json only
+      const index = await readIndex(directory);
+      index.funds = index.funds.map((item: { ticker: string }) => item.ticker === 'NEWF' ? { ...item, asOfDate: '—', note: 'catalog only' } : item);
+      await writeJsonIfChanged(join(directory, 'index.json'), index);
+      expect(await runUpdater(feedConfig(directory, { TICKERS: 'NEWF' }), healthy(tickers))).toMatchObject({ updatedCount: 1, failures: 0 });
+      const fresh = await row('NEWF');
+      expect(fresh).toMatchObject({ dataFile: './funds/NEWF/meta.json', asOfDate: (await readMeta(directory, 'NEWF')).nav.asOfDate, holdings: 3, history: 29 });
+      expect(Object.keys(fresh).sort()).toEqual(Object.keys(await row('AAA')).sort());
     });
   });
 });
