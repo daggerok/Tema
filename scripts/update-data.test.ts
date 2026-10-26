@@ -5,7 +5,7 @@ import { mkdtemp, readFile, readdir, rm, stat, utimes } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  type FetchFunction, CONTROL_NAMES, RETURNS_BASIS, SEC_COMPANY_TICKERS_MF_URL, SEC_SUBMISSIONS_URL, SOFT_DEADLINE_MS,
+  type FetchFunction, CLOSED_FUNDS, CONTROL_NAMES, RETURNS_BASIS, closedFund, SEC_COMPANY_TICKERS_MF_URL, SEC_SUBMISSIONS_URL, SOFT_DEADLINE_MS,
   createNportResolver, createPacedHttpClient, createProviderHttpClients, createRequestGate, decodeTemaCsv, deriveTemaMetrics,
   edgarSeriesFilingsUrl, fillNportTickers, filterFundFromIndex, findTemaHoldingsCsvUrl, indexFundFromMeta, installSystemCa,
   isCertError, isRetryableHttpStatus, isoFromDateLabel, minimalIndexFund, normalizeTemaDate, nportBelongsToTema,
@@ -217,7 +217,9 @@ describe('controls', () => {
     expect(lines.join('\n')).toContain('[ config   ] Tema ETFs updater:');
     expect(lines.join('\n')).not.toContain('gmail.com');
   });
+});
 
+describe('controls 2', () => {
   test('env aliases, ticker/category lists, AUM presets, return ranges and the output directory', () => {
     const config = readUpdaterConfig({
       TEMA_LIMIT: '5', REQUEST_SLEEP: '0.25', CONCURRENCY: '3', MAX_RETRIES: '1', TICKERS: 'volt, army;DSPY', CATEGORY: 'equity, fixed income',
@@ -359,7 +361,9 @@ describe('parsing', () => {
     expect(parseTemaFundPage(fundPageFixture, 'VOLT', 'VOLT').name).toBe('Tema Electrification ETF');
     expect(() => parseTemaFundPage(fundPageFixture, 'ARMY')).toThrow('fund page identifies itself as VOLT');
   });
+});
 
+describe('parsing 2', () => {
   test.each([
     ['2026-09-29', '2026-09-29'], ['09/29/2026', '2026-09-29'], ['12/03/24', '2024-12-03'], ['09292026', '2026-09-29'],
     ['Sep 30 2026', '2026-09-30'], ['September 29, 2026', '2026-09-29'], ['2026-02-30', ''], ['', ''],
@@ -480,7 +484,9 @@ describe('metrics', () => {
     expect(Object.keys(blank.metrics as object)).toEqual(Object.keys(minimalIndexFund(fund).metrics as object));
     expect(Object.keys(blank.metrics as object)).toEqual(['ytd', 'tr1y', 'tr3y', 'tr5y', 'tr10y', 'cagr3y', 'cagr5y', 'cagr10y', 'siAnn', 'dividendYield', 'dividendYieldText', 'secYield', 'secYieldText', 'dividendYieldBasis', 'returnsBasis', 'performanceAsOf']);
   });
+});
 
+describe('metrics 2', () => {
   test('dividendYieldBasis: computed-trailing-12m exactly when the yield exists, null otherwise, kept with the yield on every row kind', () => {
     const fund = { ticker: 'NEW', name: 'New ETF', fundPage: 'https://temaetfs.com/new' };
     const day = (date: string, close: number) => ({ date, close, adjClose: close, volume: 1 });
@@ -604,6 +610,48 @@ describe('pipeline', () => {
       expect(await treeSnapshot(directory)).toBe(published);
     });
   });
+});
+
+describe('pipeline 2', () => {
+  test('a closed fund is never fetched or reported failed: its files stay as published, its index row says closed, a rerun writes nothing', async () => {
+    const entry = { ticker: 'BBB', closed: '2026-10-01', source: 'https://www.sec.gov/Archives/edgar/data/1944285/notice.htm' };
+    expect(() => closedFund([{ ...entry, closed: 'soon' }], 'BBB')).toThrow('CLOSED_FUNDS');
+    expect(closedFund([entry], 'bbb')).toEqual(entry);
+    await withFeed(async (directory) => {
+      await runUpdater(feedConfig(directory), healthy(['AAA', 'BBB', 'CCC']));
+      const firstRows = (await readIndex(directory)).funds;
+      const bbbFiles = () => treeSnapshot(join(directory, 'funds', 'BBB'));
+      const published = await bbbFiles();
+      // the live catalog no longer lists BBB and its holdings would fail the guard: neither may matter
+      const urls: string[] = [];
+      const blank = holdingsFixture.replace(/,0\.\d+,0,/g, ',n/a,0,');
+      const issuer = { fetch: async (input: string | URL) => { urls.push(String(input)); return String(input).includes('BBB-holdings') ? okResponse(blank, 'text/csv') : issuerFor(['AAA', 'CCC']).fetch(input); } };
+      const yahoo = yahooFor(dailyChart('2026-09-01', 29), urls);
+      const sec = { fetch: async (input: string | URL) => { urls.push(String(input)); return downClient.fetch(); } };
+      CLOSED_FUNDS.push(entry);
+      try {
+        const summary = await runUpdater(feedConfig(directory, { TICKERS: 'BBB', EDGAR_FALLBACK: 'true' }), { issuer, yahoo, sec });
+        expect(urls.filter((url) => /bbb/i.test(url))).toEqual([]);
+        expect(summary).toMatchObject({ selectedCount: 0, failures: 0 });
+        expect(allFundsFailed(summary)).toBe(false);
+        expect(await bbbFiles()).toBe(published);
+        const rows = (await readIndex(directory)).funds;
+        expect(rows.map((row: { ticker: string }) => row.ticker)).toEqual(['AAA', 'BBB', 'CCC']);
+        const row = rows.find((item: { ticker: string }) => item.ticker === 'BBB');
+        expect(row).toMatchObject({ status: 'closed', closedDate: '2026-10-01', closedSource: entry.source, dataFile: './funds/BBB/meta.json' });
+        const { status, closedDate, closedSource, ...rest } = row;
+        expect(rest).toEqual(firstRows.find((item: { ticker: string }) => item.ticker === 'BBB'));
+        expect(rows.filter((item: { status?: string }) => item.status === 'closed')).toHaveLength(1);
+        const closed = await treeSnapshot(directory);
+        await backdate(directory);
+        await runUpdater(feedConfig(directory), { issuer, yahoo, sec });
+        expect(await treeSnapshot(directory)).toBe(closed);
+        expect(await touchedFiles(directory)).toEqual([]);
+      } finally {
+        CLOSED_FUNDS.splice(CLOSED_FUNDS.indexOf(entry), 1);
+      }
+    });
+  });
 
   test('a fund without funds/<T>/meta.json gets dataFile null and the full metrics keys; funds with meta stay listed', async () => {
     await withFeed(async (directory) => {
@@ -650,7 +698,9 @@ describe('pipeline', () => {
       expect(await readFile(statePath, 'utf8').catch(() => 'gone')).toBe('gone');
     });
   });
+});
 
+describe('pipeline 3', () => {
   test('the soft deadline stops taking funds but still writes the index with every row', async () => {
     expect(SOFT_DEADLINE_MS).toBe(25 * 60_000);
     await withFeed(async (directory) => {
@@ -714,7 +764,9 @@ describe('pipeline', () => {
       expect(meta.holdings.totalRows).toBe(1);
     });
   });
+});
 
+describe('pipeline 4', () => {
   test('a shorter HISTORY_RANGE drops long-horizon returns instead of keeping old values under the new date', async () => {
     await withFeed(async (directory) => {
       const run = (chart: unknown, env: Record<string, string>) => runUpdater(feedConfig(directory, { TICKERS: 'VOLT', ...env }), { issuer: issuerFor(['VOLT']), yahoo: yahooFor(chart), sec: downClient });
@@ -827,7 +879,9 @@ describe('network', () => {
     expect(await responseText(stalled, 'https://example.test/stall')).toBe('complete body');
     expect(attempts).toBe(2);
   });
+});
 
+describe('network 2', () => {
   test('in-flight peak is 1 at CONCURRENCY=1 and N at CONCURRENCY=N (offline counter)', async () => {
     const tickers = ['AAA', 'BBB', 'CCC'];
     const run = async (concurrency: number): Promise<number> => {
