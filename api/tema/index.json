@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-26T08:04:17Z",
-  "catalogReadAt": "2026-10-26T08:04:17Z",
+  "generatedAt": "2026-10-26T19:39:38Z",
+  "catalogReadAt": "2026-10-26T19:39:38Z",
   "source": {
     "catalog": "https://temaetfs.com/funds",
     "holdings": "Tema ETFs official fund pages and daily HubSpot CSVs",
@@ -10,7 +10,7 @@
   "counts": {
     "funds": 16,
     "holdings": 1009,
-    "history": 4878
+    "history": 4879
   },
   "funds": [
     {
@@ -100,7 +100,7 @@
         "performanceAsOf": "2026-09-30"
       },
       "holdings": 37,
-      "history": 272
+      "history": 273
     },
     {
       "ticker": "CANC",
