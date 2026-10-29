@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-25T01:54:00Z",
+  "generatedAt": "2026-10-29T20:55:02Z",
   "ticker": "NASA",
   "name": "NASA Space Innovators ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/nasa",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/NASA-holdings-10222026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/NASA-holdings-10282026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/NASA",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-22)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-10-28)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$20.13",
-    "value": 20.13,
-    "asOfDate": "Oct 22 2026"
+    "display": "$21.61",
+    "value": 21.61,
+    "asOfDate": "Oct 28 2026"
   },
   "marketPrice": {
-    "display": "$20.07",
-    "value": 20.07,
-    "asOfDate": "Oct 22 2026"
+    "display": "$21.64",
+    "value": 21.64,
+    "asOfDate": "Oct 28 2026"
   },
   "premiumDiscount": {
-    "display": "-0.28%",
-    "value": -0.28
+    "display": "0.12%",
+    "value": 0.12
   },
   "aum": {
-    "display": "$950,551,499",
-    "value": 950551499,
-    "asOfDate": "Oct 22 2026",
+    "display": "$994,656,116",
+    "value": 994656116,
+    "asOfDate": "Oct 28 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -119,17 +119,17 @@
       "holdings/001.json"
     ],
     "pageSize": 250,
-    "totalRows": 38,
-    "asOfDate": "2026-10-22",
-    "source": "Tema official daily holdings CSV (2026-10-22)"
+    "totalRows": 37,
+    "asOfDate": "2026-10-28",
+    "source": "Tema official daily holdings CSV (2026-10-28)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 144,
-    "asOfDate": "2026-10-23",
+    "totalRows": 148,
+    "asOfDate": "2026-10-29",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

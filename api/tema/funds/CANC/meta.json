@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-25T01:53:52Z",
+  "generatedAt": "2026-10-29T20:54:55Z",
   "ticker": "CANC",
   "name": "CANC Oncology ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/canc",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/CANC-holdings-10222026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/CANC-holdings-10282026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/CANC",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-22)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-10-28)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": null
   },
   "nav": {
-    "display": "$41.46",
-    "value": 41.46,
-    "asOfDate": "Oct 22 2026"
+    "display": "$42.54",
+    "value": 42.54,
+    "asOfDate": "Oct 28 2026"
   },
   "marketPrice": {
-    "display": "$41.50",
-    "value": 41.5,
-    "asOfDate": "Oct 22 2026"
+    "display": "$42.60",
+    "value": 42.6,
+    "asOfDate": "Oct 28 2026"
   },
   "premiumDiscount": {
-    "display": "0.09%",
-    "value": 0.09
+    "display": "0.15%",
+    "value": 0.15
   },
   "aum": {
-    "display": "$211,855,642",
-    "value": 211855642,
-    "asOfDate": "Oct 22 2026",
+    "display": "$217,385,546",
+    "value": 217385546,
+    "asOfDate": "Oct 28 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -133,16 +133,16 @@
     ],
     "pageSize": 250,
     "totalRows": 58,
-    "asOfDate": "2026-10-22",
-    "source": "Tema official daily holdings CSV (2026-10-22)"
+    "asOfDate": "2026-10-28",
+    "source": "Tema official daily holdings CSV (2026-10-28)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 803,
-    "asOfDate": "2026-10-23",
+    "totalRows": 807,
+    "asOfDate": "2026-10-29",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-25T01:53:56Z",
+  "generatedAt": "2026-10-29T20:54:58Z",
   "ticker": "HLTH",
   "name": "HLTH Healthcare AI ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/hlth",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/HLTH-holdings-10222026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/HLTH-holdings-10282026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/HLTH",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-22)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-10-28)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$27.76",
-    "value": 27.76,
-    "asOfDate": "Oct 22 2026"
+    "display": "$29.87",
+    "value": 29.87,
+    "asOfDate": "Oct 28 2026"
   },
   "marketPrice": {
-    "display": "$27.80",
-    "value": 27.8,
-    "asOfDate": "Oct 22 2026"
+    "display": "$29.87",
+    "value": 29.87,
+    "asOfDate": "Oct 28 2026"
   },
   "premiumDiscount": {
-    "display": "0.16%",
-    "value": 0.16
+    "display": "0.02%",
+    "value": 0.02
   },
   "aum": {
-    "display": "$11,658,981",
-    "value": 11658981,
-    "asOfDate": "Oct 22 2026",
+    "display": "$12,543,488",
+    "value": 12543488,
+    "asOfDate": "Oct 28 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -120,16 +120,16 @@
     ],
     "pageSize": 250,
     "totalRows": 33,
-    "asOfDate": "2026-10-22",
-    "source": "Tema official daily holdings CSV (2026-10-22)"
+    "asOfDate": "2026-10-28",
+    "source": "Tema official daily holdings CSV (2026-10-28)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 68,
-    "asOfDate": "2026-10-23",
+    "totalRows": 72,
+    "asOfDate": "2026-10-29",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-25T01:53:54Z",
+  "generatedAt": "2026-10-29T20:54:56Z",
   "ticker": "DISK",
   "name": "DISK Memory ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/disk",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/DISK-holdings-10222026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/DISK-holdings-10282026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/DISK",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-22)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-10-28)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$28.44",
-    "value": 28.44,
-    "asOfDate": "Oct 22 2026"
+    "display": "$32.31",
+    "value": 32.31,
+    "asOfDate": "Oct 28 2026"
   },
   "marketPrice": {
-    "display": "$27.83",
-    "value": 27.83,
-    "asOfDate": "Oct 22 2026"
+    "display": "$32.96",
+    "value": 32.96,
+    "asOfDate": "Oct 28 2026"
   },
   "premiumDiscount": {
-    "display": "-2.13%",
-    "value": -2.13
+    "display": "2.02%",
+    "value": 2.02
   },
   "aum": {
-    "display": "$52,323,029",
-    "value": 52323029,
-    "asOfDate": "Oct 22 2026",
+    "display": "$58,152,562",
+    "value": 58152562,
+    "asOfDate": "Oct 28 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -120,16 +120,16 @@
     ],
     "pageSize": 250,
     "totalRows": 18,
-    "asOfDate": "2026-10-22",
-    "source": "Tema official daily holdings CSV (2026-10-22)"
+    "asOfDate": "2026-10-28",
+    "source": "Tema official daily holdings CSV (2026-10-28)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 82,
-    "asOfDate": "2026-10-23",
+    "totalRows": 86,
+    "asOfDate": "2026-10-29",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

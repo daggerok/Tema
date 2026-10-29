@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-26T19:39:38Z",
+  "generatedAt": "2026-10-29T20:54:54Z",
   "ticker": "ARMY",
   "name": "ARMY International Defense ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/army",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/ARMY-holdings-10232026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/ARMY-holdings-10282026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/ARMY",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-23)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-10-28)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": null
   },
   "nav": {
-    "display": "$22.85",
-    "value": 22.85,
-    "asOfDate": "Oct 23 2026"
+    "display": "$23.54",
+    "value": 23.54,
+    "asOfDate": "Oct 28 2026"
   },
   "marketPrice": {
-    "display": "$22.97",
-    "value": 22.97,
-    "asOfDate": "Oct 23 2026"
+    "display": "$23.62",
+    "value": 23.62,
+    "asOfDate": "Oct 28 2026"
   },
   "premiumDiscount": {
-    "display": "0.49%",
-    "value": 0.49
+    "display": "0.34%",
+    "value": 0.34
   },
   "aum": {
-    "display": "$12,340,919",
-    "value": 12340919,
-    "asOfDate": "Oct 23 2026",
+    "display": "$12,712,485",
+    "value": 12712485,
+    "asOfDate": "Oct 28 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -120,16 +120,16 @@
     ],
     "pageSize": 250,
     "totalRows": 37,
-    "asOfDate": "2026-10-23",
-    "source": "Tema official daily holdings CSV (2026-10-23)"
+    "asOfDate": "2026-10-28",
+    "source": "Tema official daily holdings CSV (2026-10-28)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 273,
-    "asOfDate": "2026-10-26",
+    "totalRows": 276,
+    "asOfDate": "2026-10-29",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

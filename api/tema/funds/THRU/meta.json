@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-25T01:54:02Z",
+  "generatedAt": "2026-10-29T20:55:04Z",
   "ticker": "THRU",
   "name": "Tema Commodity Infrastructure ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/thru",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/THRU-holdings-10222026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/THRU-holdings-10282026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/THRU",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-22)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-10-28)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$24.94",
-    "value": 24.94,
-    "asOfDate": "Oct 22 2026"
+    "display": "$25.49",
+    "value": 25.49,
+    "asOfDate": "Oct 28 2026"
   },
   "marketPrice": {
-    "display": "$25.01",
-    "value": 25.01,
-    "asOfDate": "Oct 22 2026"
+    "display": "$25.59",
+    "value": 25.59,
+    "asOfDate": "Oct 28 2026"
   },
   "premiumDiscount": {
-    "display": "0.28%",
-    "value": 0.28
+    "display": "0.39%",
+    "value": 0.39
   },
   "aum": {
     "display": "—",
     "value": null,
-    "asOfDate": "Oct 22 2026",
+    "asOfDate": "Oct 28 2026",
     "source": null
   },
   "yields": {
@@ -64,9 +64,9 @@
   "returns": {
     "derivedFrom": "Yahoo Finance adjusted-close total-return proxy; not official NAV total returns",
     "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
-    "performanceAsOf": "2026-10-23",
+    "performanceAsOf": "2026-10-29",
     "monthEnd": {
-      "asOfDate": "Oct 23 2026",
+      "asOfDate": "Oct 29 2026",
       "mo1": null,
       "qtd": null,
       "ytd": null,
@@ -85,7 +85,7 @@
       "sinceInceptionText": "—"
     },
     "quarterEnd": {
-      "asOfDate": "Oct 23 2026",
+      "asOfDate": "Oct 29 2026",
       "mo1": null,
       "qtd": null,
       "ytd": null,
@@ -120,16 +120,16 @@
     ],
     "pageSize": 250,
     "totalRows": 34,
-    "asOfDate": "2026-10-22",
-    "source": "Tema official daily holdings CSV (2026-10-22)"
+    "asOfDate": "2026-10-28",
+    "source": "Tema official daily holdings CSV (2026-10-28)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 2,
-    "asOfDate": "2026-10-23",
+    "totalRows": 6,
+    "asOfDate": "2026-10-29",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }
