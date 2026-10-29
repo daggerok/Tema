@@ -716,7 +716,7 @@ function outputFundLine(index: number, total: number, ticker: string, status: st
     field('sec', outputPercent(data.secYield ?? data.yields?.secYield ?? metrics.secYield)),
     field('wp', data.workplaceRaw),
   ].filter(part => part !== '').join(' ');
-  return `[ ${String(index).padStart(width)}/${String(total).padEnd(width)}  ] ${outputClean(ticker).padEnd(5)} ${status.padEnd(9)}${detail ? ` ${detail}` : ''}${reason ? ` reason=${outputClean(reason)}` : ''}`;
+  return `[ ${`${String(index).padStart(width)}/${total}`.padEnd(8)} ] ${outputClean(ticker).padEnd(5)} ${status.padEnd(9)}${detail ? ` ${detail}` : ''}${reason ? ` reason=${outputClean(reason)}` : ''}`;
 }
 function outputCreateReporter(root: URL | string, total: number) {
   let completed = 0;
@@ -742,7 +742,7 @@ function outputCounts(funds: number, holdings: number, history: number): string 
   return `[ done     ] counts: ${funds.toLocaleString('en-US')} funds / ${holdings.toLocaleString('en-US')} holdings rows / ${history.toLocaleString('en-US')} history rows`;
 }
 
-/** The `[ config ]` block: the parsed config under the canonical environment names (SEC_UA is redacted). */
+/** The `[ config   ]` block: the parsed config under the canonical environment names (SEC_UA is redacted). */
 export function printUpdaterConfig(config: UpdaterConfig): void {
   const range = (value: NumericRange) => ({ source: configRangeValue(value) });
   const periods = (ranges: Record<string, NumericRange>) => Object.fromEntries(RETURN_PERIODS.map(period => [period, range(ranges[period])]));
