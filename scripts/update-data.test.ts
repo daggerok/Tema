@@ -584,6 +584,8 @@ describe('pipeline', () => {
       expect(first).toMatchObject({ catalogCount: 1, selectedCount: 1, updatedCount: 1, failures: 0, holdings: 3, history: 29 });
       expect(secRequests).toBe(0);
       expect((await readIndex(directory)).funds[0]).toMatchObject({ ticker: 'VOLT', holdings: 3, history: 29, dataFile: './funds/VOLT/meta.json' });
+      // the 52-week range keys from the published history pages (shared range-52w block)
+      for (const row of (await readIndex(directory)).funds) expect(Object.keys(row.metrics)).toEqual(expect.arrayContaining(['week52Low', 'week52High', 'range52w', 'range52wClose', 'range52wAsOf', 'range52wSince', 'range52wBasis']));
       const meta = await readMeta(directory, 'VOLT');
       expect(meta.holdings.pages).toEqual(['holdings/001.json']);
       expect(meta.source.holdingsDownload).toBe(csvUrlFor('VOLT'));
@@ -692,7 +694,8 @@ describe('pipeline 2', () => {
       const blank = funds.find((row: { ticker: string }) => row.ticker === 'BBB');
       expect(blank.dataFile).toBeNull();
       expect(Object.keys(blank.metrics)).toEqual(Object.keys(funds.find((row: { ticker: string }) => row.ticker === 'AAA').metrics));
-      expect(Object.values(blank.metrics).filter((value) => value === null)).toHaveLength(13);
+      // 13 metrics plus the seven 52-week range keys (shared range-52w block), all null without published history
+      expect(Object.values(blank.metrics).filter((value) => value === null)).toHaveLength(20);
       expect(blank.metrics.returnsBasis).toBe(RETURNS_BASIS);
       const index = await readIndex(directory);
       index.funds = index.funds.filter((row: { ticker: string }) => row.ticker !== 'AAA');
