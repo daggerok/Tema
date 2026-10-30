@@ -851,6 +851,13 @@ describe('pipeline 4', () => {
       expect(await run(windowOf(full, 365), { HISTORY_RANGE: '1y' })).toMatchObject({ updatedCount: 1, failures: 0 });
       expect(await treeSnapshot(directory)).toBe(published);
       expect((await readMeta(directory, 'VOLT')).history.totalRows).toBe(1370);
+      // a truncated `max` answer (Yahoo served 2 bars for some funds on 2026-10-29) never shrinks the history either:
+      // one that joins the published days keeps them all, one that does not join keeps the fund as published
+      await run(windowOf(full, 2), {});
+      expect(await treeSnapshot(directory)).toBe(published);
+      await run(dailyChart('2030-01-01', 1), {});
+      expect(await treeSnapshot(directory)).toBe(published);
+      expect((await readMeta(directory, 'VOLT')).history.totalRows).toBe(1370);
     });
   });
 
@@ -871,10 +878,11 @@ describe('pipeline 4', () => {
 
   test('stale history pages are removed after the new meta.json lists the new ones', async () => {
     await withFeed(async (directory) => {
-      const run = (chart: unknown) => runUpdater(feedConfig(directory, { TICKERS: 'AAA', HISTORY_PAGE_SIZE: '10' }), { issuer: issuerFor(['AAA']), yahoo: yahooFor(chart), sec: downClient });
+      const run = (chart: unknown, pageSize = '10') => runUpdater(feedConfig(directory, { TICKERS: 'AAA', HISTORY_PAGE_SIZE: pageSize }), { issuer: issuerFor(['AAA']), yahoo: yahooFor(chart), sec: downClient });
       await run(dailyChart('2026-08-01', 29));
       expect((await readdir(join(directory, 'funds', 'AAA', 'history'))).sort()).toEqual(['001.json', '002.json', '003.json']);
-      await run(dailyChart('2026-09-10', 20));
+      // the same 29 days in larger pages: a fresh chart no longer replaces the published history, the page size does the shrinking
+      await run(dailyChart('2026-08-01', 29), '15');
       expect((await readdir(join(directory, 'funds', 'AAA', 'history'))).sort()).toEqual(['001.json', '002.json']);
       expect((await readMeta(directory, 'AAA')).history.pages).toEqual(['history/001.json', 'history/002.json']);
     });

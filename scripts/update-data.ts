@@ -2154,13 +2154,15 @@ export async function runUpdater(
     if (!config.skipYahoo) {
       try {
         const fetched = parseYahooChart(await responseJson(clients.yahoo, yahooChartUrl(fund.ticker, config.historyRange)));
-        // A HISTORY_RANGE window never shrinks the published history (and with it 3y, 5y, 10y and since inception)
-        if (/^\d+y$/.test(config.historyRange) && previousHistory && previousHistory.totalRows) {
+        // A fresh chart never shrinks the published history (and with it 3y, 5y, 10y and since inception): the older published
+        // days and distributions stay, and a chart that does not join them keeps the fund as published (shared windowed-chart
+        // block). This covers a HISTORY_RANGE window and a truncated `max` answer; a full `max` answer starts at inception: unchanged
+        if (previousHistory && previousHistory.totalRows) {
           const publishedHistory = await readPublishedSheet(config.outputDir, fund.ticker, previousHistory);
           if (!publishedHistory) throw new Error('published history unreadable; a window cannot join it');
           const distributions = Array.isArray(recordOf(previousMeta.distributions).rows) ? recordOf(previousMeta.distributions).rows as unknown[] : [];
           chart = windowedTemaChart(fetched, temaWindowHistory(publishedHistory.rows, distributions), distributions);
-          if (!chart) throw new Error(`chart window does not join the published history (${config.historyRange})`);
+          if (!chart) throw new Error(`chart does not join the published history (${config.historyRange}, ${fetched.days.length} days)`);
         } else {
           chart = fetched;
         }
