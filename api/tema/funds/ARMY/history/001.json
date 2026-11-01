@@ -2,7 +2,7 @@
   "ticker": "ARMY",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 276,
+  "totalRows": 277,
   "headers": [
     "Date",
     "NAV",
@@ -1663,7 +1663,13 @@
     {
       "Date": "Oct 29 2026",
       "NAV": "",
-      "Market Price": "24.1924",
+      "Market Price": "24.191999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Oct 30 2026",
+      "NAV": "",
+      "Market Price": "23.773001",
       "Premium/Discount": ""
     }
   ]
