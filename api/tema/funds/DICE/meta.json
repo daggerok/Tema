@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-01T02:45:34Z",
+  "generatedAt": "2026-11-08T02:51:23Z",
   "ticker": "DICE",
   "name": "DICE Trading & Prediction Markets ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/dice",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/DICE-holdings-10302026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/DICE-holdings-11062026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/DICE",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-30)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-11-06)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$21.68",
-    "value": 21.68,
-    "asOfDate": "Oct 30 2026"
+    "display": "$21.13",
+    "value": 21.13,
+    "asOfDate": "Nov 06 2026"
   },
   "marketPrice": {
-    "display": "$21.55",
-    "value": 21.55,
-    "asOfDate": "Oct 30 2026"
+    "display": "$21.15",
+    "value": 21.15,
+    "asOfDate": "Nov 06 2026"
   },
   "premiumDiscount": {
-    "display": "-0.61%",
-    "value": -0.61
+    "display": "0.11%",
+    "value": 0.11
   },
   "aum": {
     "display": "—",
     "value": null,
-    "asOfDate": "Oct 30 2026",
+    "asOfDate": "Nov 06 2026",
     "source": null
   },
   "yields": {
@@ -64,19 +64,19 @@
   "returns": {
     "derivedFrom": "Yahoo Finance adjusted-close total-return proxy; not official NAV total returns",
     "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
-    "performanceAsOf": "2026-09-30",
+    "performanceAsOf": "2026-10-30",
     "monthEnd": {
-      "asOfDate": "Sep 30 2026",
-      "mo1": null,
-      "qtd": null,
+      "asOfDate": "Oct 30 2026",
+      "mo1": -12.58,
+      "qtd": -12.58,
       "ytd": null,
       "yr1": null,
       "yr3": null,
       "yr5": null,
       "yr10": null,
       "sinceInception": null,
-      "mo1Text": "—",
-      "qtdText": "—",
+      "mo1Text": "-12.58%",
+      "qtdText": "-12.58%",
       "ytdText": "—",
       "yr1Text": "—",
       "yr3Text": "—",
@@ -120,16 +120,16 @@
     ],
     "pageSize": 250,
     "totalRows": 39,
-    "asOfDate": "2026-10-30",
-    "source": "Tema official daily holdings CSV (2026-10-30)"
+    "asOfDate": "2026-11-06",
+    "source": "Tema official daily holdings CSV (2026-11-06)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 38,
-    "asOfDate": "2026-10-30",
+    "totalRows": 43,
+    "asOfDate": "2026-11-06",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

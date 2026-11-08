@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-01T02:45:36Z",
+  "generatedAt": "2026-11-08T02:51:25Z",
   "ticker": "DSPY",
   "name": "DSPY S&P 500 Historical Weight ETF Strategy",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/dspy",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/DSPY-holdings-10302026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/DSPY-holdings-11062026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/DSPY",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-30)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-11-06)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,28 +31,28 @@
     "net": 0.18
   },
   "nav": {
-    "display": "$66.03",
-    "value": 66.03,
-    "asOfDate": "Oct 30 2026"
+    "display": "$64.15",
+    "value": 64.15,
+    "asOfDate": "Nov 06 2026"
   },
   "marketPrice": {
-    "display": "$66.05",
-    "value": 66.05,
-    "asOfDate": "Oct 30 2026"
+    "display": "$64.19",
+    "value": 64.19,
+    "asOfDate": "Nov 06 2026"
   },
   "premiumDiscount": {
-    "display": "0.03%",
-    "value": 0.03
+    "display": "0.06%",
+    "value": 0.06
   },
   "aum": {
-    "display": "$1,013,504,531",
-    "value": 1013504531,
-    "asOfDate": "Oct 30 2026",
+    "display": "$986,609,554",
+    "value": 986609554,
+    "asOfDate": "Nov 06 2026",
     "source": "Tema official fund page"
   },
   "yields": {
-    "dividendYield": 0.94,
-    "dividendYieldText": "0.94%",
+    "dividendYield": 0.96,
+    "dividendYieldText": "0.96%",
     "dividendYieldBasis": "computed-trailing-12m",
     "dividendYieldKind": "Trailing 12-month Yahoo Finance chart distributions divided by latest market price",
     "distributionRate": null,
@@ -64,25 +64,25 @@
   "returns": {
     "derivedFrom": "Yahoo Finance adjusted-close total-return proxy; not official NAV total returns",
     "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
-    "performanceAsOf": "2026-09-30",
+    "performanceAsOf": "2026-10-30",
     "monthEnd": {
-      "asOfDate": "Sep 30 2026",
-      "mo1": -1.63,
-      "qtd": 0.28,
-      "ytd": 13.66,
-      "yr1": 16.36,
+      "asOfDate": "Oct 30 2026",
+      "mo1": 0.35,
+      "qtd": 0.35,
+      "ytd": 14.05,
+      "yr1": 15.42,
       "yr3": null,
       "yr5": null,
       "yr10": null,
-      "sinceInception": 21.37,
-      "mo1Text": "-1.63%",
-      "qtdText": "0.28%",
-      "ytdText": "13.66%",
-      "yr1Text": "16.36%",
+      "sinceInception": 20.41,
+      "mo1Text": "0.35%",
+      "qtdText": "0.35%",
+      "ytdText": "14.05%",
+      "yr1Text": "15.42%",
       "yr3Text": "—",
       "yr5Text": "—",
       "yr10Text": "—",
-      "sinceInceptionText": "21.37%"
+      "sinceInceptionText": "20.41%"
     },
     "quarterEnd": {
       "asOfDate": "Sep 30 2026",
@@ -147,16 +147,16 @@
     ],
     "pageSize": 250,
     "totalRows": 505,
-    "asOfDate": "2026-10-30",
-    "source": "Tema official daily holdings CSV (2026-10-30)"
+    "asOfDate": "2026-11-06",
+    "source": "Tema official daily holdings CSV (2026-11-06)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 398,
-    "asOfDate": "2026-10-30",
+    "totalRows": 403,
+    "asOfDate": "2026-11-06",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

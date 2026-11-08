@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-01T02:45:42Z",
+  "generatedAt": "2026-11-08T02:51:31Z",
   "ticker": "PSOX",
   "name": "PSOX MLCC & PowerSemi ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/psox",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/PSOX-holdings-10302026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/PSOX-holdings-11062026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/PSOX",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-30)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-11-06)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$38.46",
-    "value": 38.46,
-    "asOfDate": "Oct 30 2026"
+    "display": "$30.52",
+    "value": 30.52,
+    "asOfDate": "Nov 06 2026"
   },
   "marketPrice": {
-    "display": "$38.02",
-    "value": 38.02,
-    "asOfDate": "Oct 30 2026"
+    "display": "$30.72",
+    "value": 30.72,
+    "asOfDate": "Nov 06 2026"
   },
   "premiumDiscount": {
-    "display": "-1.14%",
-    "value": -1.14
+    "display": "0.65%",
+    "value": 0.65
   },
   "aum": {
-    "display": "$3,076,660",
-    "value": 3076660,
-    "asOfDate": "Oct 30 2026",
+    "display": "$2,441,747",
+    "value": 2441747,
+    "asOfDate": "Nov 06 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -64,19 +64,19 @@
   "returns": {
     "derivedFrom": "Yahoo Finance adjusted-close total-return proxy; not official NAV total returns",
     "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
-    "performanceAsOf": "2026-09-30",
+    "performanceAsOf": "2026-10-30",
     "monthEnd": {
-      "asOfDate": "Sep 30 2026",
-      "mo1": 5.87,
-      "qtd": null,
+      "asOfDate": "Oct 30 2026",
+      "mo1": -18.9,
+      "qtd": -18.9,
       "ytd": null,
       "yr1": null,
       "yr3": null,
       "yr5": null,
       "yr10": null,
       "sinceInception": null,
-      "mo1Text": "5.87%",
-      "qtdText": "—",
+      "mo1Text": "-18.90%",
+      "qtdText": "-18.90%",
       "ytdText": "—",
       "yr1Text": "—",
       "yr3Text": "—",
@@ -120,16 +120,16 @@
     ],
     "pageSize": 250,
     "totalRows": 22,
-    "asOfDate": "2026-10-30",
-    "source": "Tema official daily holdings CSV (2026-10-30)"
+    "asOfDate": "2026-11-06",
+    "source": "Tema official daily holdings CSV (2026-11-06)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 54,
-    "asOfDate": "2026-10-30",
+    "totalRows": 59,
+    "asOfDate": "2026-11-06",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

@@ -2,7 +2,7 @@
   "ticker": "NASA",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 149,
+  "totalRows": 154,
   "headers": [
     "Date",
     "NAV",
@@ -902,6 +902,36 @@
       "Date": "Oct 30 2026",
       "NAV": "",
       "Market Price": "20.42",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 02 2026",
+      "NAV": "",
+      "Market Price": "19.83",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 03 2026",
+      "NAV": "",
+      "Market Price": "20.379999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 04 2026",
+      "NAV": "",
+      "Market Price": "19.74",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 05 2026",
+      "NAV": "",
+      "Market Price": "17.690001",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 06 2026",
+      "NAV": "",
+      "Market Price": "19.290001",
       "Premium/Discount": ""
     }
   ]

@@ -2,7 +2,7 @@
   "ticker": "CANC",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 808,
+  "totalRows": 813,
   "headers": [
     "Date",
     "NAV",
@@ -4856,6 +4856,36 @@
       "Date": "Oct 30 2026",
       "NAV": "",
       "Market Price": "42.290001",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 02 2026",
+      "NAV": "",
+      "Market Price": "41.671001",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 03 2026",
+      "NAV": "",
+      "Market Price": "42.098",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 04 2026",
+      "NAV": "",
+      "Market Price": "42.895",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 05 2026",
+      "NAV": "",
+      "Market Price": "40.779999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 06 2026",
+      "NAV": "",
+      "Market Price": "41.849998",
       "Premium/Discount": ""
     }
   ]

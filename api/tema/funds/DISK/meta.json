@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-01T02:45:35Z",
+  "generatedAt": "2026-11-08T02:51:24Z",
   "ticker": "DISK",
   "name": "DISK Memory ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/disk",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/DISK-holdings-10302026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/DISK-holdings-11062026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/DISK",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-30)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-11-06)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$29.47",
-    "value": 29.47,
-    "asOfDate": "Oct 30 2026"
+    "display": "$22.57",
+    "value": 22.57,
+    "asOfDate": "Nov 06 2026"
   },
   "marketPrice": {
-    "display": "$28.63",
-    "value": 28.63,
-    "asOfDate": "Oct 30 2026"
+    "display": "$22.83",
+    "value": 22.83,
+    "asOfDate": "Nov 06 2026"
   },
   "premiumDiscount": {
-    "display": "-2.86%",
-    "value": -2.86
+    "display": "1.15%",
+    "value": 1.15
   },
   "aum": {
-    "display": "$53,937,614",
-    "value": 53937614,
-    "asOfDate": "Oct 30 2026",
+    "display": "$41,303,559",
+    "value": 41303559,
+    "asOfDate": "Nov 06 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -64,19 +64,19 @@
   "returns": {
     "derivedFrom": "Yahoo Finance adjusted-close total-return proxy; not official NAV total returns",
     "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
-    "performanceAsOf": "2026-09-30",
+    "performanceAsOf": "2026-10-30",
     "monthEnd": {
-      "asOfDate": "Sep 30 2026",
-      "mo1": 7.97,
-      "qtd": -22.74,
+      "asOfDate": "Oct 30 2026",
+      "mo1": -26.33,
+      "qtd": -26.33,
       "ytd": null,
       "yr1": null,
       "yr3": null,
       "yr5": null,
       "yr10": null,
       "sinceInception": null,
-      "mo1Text": "7.97%",
-      "qtdText": "-22.74%",
+      "mo1Text": "-26.33%",
+      "qtdText": "-26.33%",
       "ytdText": "—",
       "yr1Text": "—",
       "yr3Text": "—",
@@ -120,16 +120,16 @@
     ],
     "pageSize": 250,
     "totalRows": 18,
-    "asOfDate": "2026-10-30",
-    "source": "Tema official daily holdings CSV (2026-10-30)"
+    "asOfDate": "2026-11-06",
+    "source": "Tema official daily holdings CSV (2026-11-06)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 87,
-    "asOfDate": "2026-10-30",
+    "totalRows": 92,
+    "asOfDate": "2026-11-06",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

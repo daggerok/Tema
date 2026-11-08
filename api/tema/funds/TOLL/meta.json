@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-01T02:45:44Z",
+  "generatedAt": "2026-11-08T02:51:33Z",
   "ticker": "TOLL",
   "name": "TOLL Durable Quality ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/toll",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/TOLL-holdings-10302026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/TOLL-holdings-11062026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/TOLL",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-30)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-11-06)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,28 +31,28 @@
     "net": 0.55
   },
   "nav": {
-    "display": "$40.48",
-    "value": 40.48,
-    "asOfDate": "Oct 30 2026"
+    "display": "$38.85",
+    "value": 38.85,
+    "asOfDate": "Nov 06 2026"
   },
   "marketPrice": {
-    "display": "$39.96",
-    "value": 39.96,
-    "asOfDate": "Oct 30 2026"
+    "display": "$38.84",
+    "value": 38.84,
+    "asOfDate": "Nov 06 2026"
   },
   "premiumDiscount": {
-    "display": "-1.28%",
-    "value": -1.28
+    "display": "-0.03%",
+    "value": -0.03
   },
   "aum": {
-    "display": "$61,120,580",
-    "value": 61120580,
-    "asOfDate": "Oct 30 2026",
+    "display": "$33,801,849",
+    "value": 33801849,
+    "asOfDate": "Nov 06 2026",
     "source": "Tema official fund page"
   },
   "yields": {
-    "dividendYield": 0.28,
-    "dividendYieldText": "0.28%",
+    "dividendYield": 0.29,
+    "dividendYieldText": "0.29%",
     "dividendYieldBasis": "computed-trailing-12m",
     "dividendYieldKind": "Trailing 12-month Yahoo Finance chart distributions divided by latest market price",
     "distributionRate": null,
@@ -64,25 +64,25 @@
   "returns": {
     "derivedFrom": "Yahoo Finance adjusted-close total-return proxy; not official NAV total returns",
     "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
-    "performanceAsOf": "2026-09-30",
+    "performanceAsOf": "2026-10-30",
     "monthEnd": {
-      "asOfDate": "Sep 30 2026",
-      "mo1": 3.28,
+      "asOfDate": "Oct 30 2026",
+      "mo1": -2.17,
       "qtd": -2.17,
-      "ytd": 15.97,
-      "yr1": 19.69,
-      "yr3": 19.21,
+      "ytd": 13.45,
+      "yr1": 16.27,
+      "yr3": 19.56,
       "yr5": null,
       "yr10": null,
-      "sinceInception": 16.55,
-      "mo1Text": "3.28%",
+      "sinceInception": 15.4,
+      "mo1Text": "-2.17%",
       "qtdText": "-2.17%",
-      "ytdText": "15.97%",
-      "yr1Text": "19.69%",
-      "yr3Text": "19.21%",
+      "ytdText": "13.45%",
+      "yr1Text": "16.27%",
+      "yr3Text": "19.56%",
       "yr5Text": "—",
       "yr10Text": "—",
-      "sinceInceptionText": "16.55%"
+      "sinceInceptionText": "15.40%"
     },
     "quarterEnd": {
       "asOfDate": "Sep 30 2026",
@@ -133,16 +133,16 @@
     ],
     "pageSize": 250,
     "totalRows": 38,
-    "asOfDate": "2026-10-30",
-    "source": "Tema official daily holdings CSV (2026-10-30)"
+    "asOfDate": "2026-11-06",
+    "source": "Tema official daily holdings CSV (2026-11-06)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 872,
-    "asOfDate": "2026-10-30",
+    "totalRows": 877,
+    "asOfDate": "2026-11-06",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

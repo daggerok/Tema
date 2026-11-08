@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-01T02:45:40Z",
+  "generatedAt": "2026-11-08T02:51:29Z",
   "ticker": "LAZR",
   "name": "LAZR Photonics & Optical ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/lazr",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/LAZR-holdings-10302026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/LAZR-holdings-11062026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/LAZR",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-30)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-11-06)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$34.27",
-    "value": 34.27,
-    "asOfDate": "Oct 30 2026"
+    "display": "$26.89",
+    "value": 26.89,
+    "asOfDate": "Nov 06 2026"
   },
   "marketPrice": {
-    "display": "$34.09",
-    "value": 34.09,
-    "asOfDate": "Oct 30 2026"
+    "display": "$26.75",
+    "value": 26.75,
+    "asOfDate": "Nov 06 2026"
   },
   "premiumDiscount": {
     "display": "-0.53%",
     "value": -0.53
   },
   "aum": {
-    "display": "$202,547,991",
-    "value": 202547991,
-    "asOfDate": "Oct 30 2026",
+    "display": "$144,685,389",
+    "value": 144685389,
+    "asOfDate": "Nov 06 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -64,19 +64,19 @@
   "returns": {
     "derivedFrom": "Yahoo Finance adjusted-close total-return proxy; not official NAV total returns",
     "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
-    "performanceAsOf": "2026-09-30",
+    "performanceAsOf": "2026-10-30",
     "monthEnd": {
-      "asOfDate": "Sep 30 2026",
-      "mo1": 5.66,
-      "qtd": -12.13,
+      "asOfDate": "Oct 30 2026",
+      "mo1": -23.32,
+      "qtd": -23.32,
       "ytd": null,
       "yr1": null,
       "yr3": null,
       "yr5": null,
       "yr10": null,
       "sinceInception": null,
-      "mo1Text": "5.66%",
-      "qtdText": "-12.13%",
+      "mo1Text": "-23.32%",
+      "qtdText": "-23.32%",
       "ytdText": "—",
       "yr1Text": "—",
       "yr3Text": "—",
@@ -120,16 +120,16 @@
     ],
     "pageSize": 250,
     "totalRows": 25,
-    "asOfDate": "2026-10-30",
-    "source": "Tema official daily holdings CSV (2026-10-30)"
+    "asOfDate": "2026-11-06",
+    "source": "Tema official daily holdings CSV (2026-11-06)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 87,
-    "asOfDate": "2026-10-30",
+    "totalRows": 92,
+    "asOfDate": "2026-11-06",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

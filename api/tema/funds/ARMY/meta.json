@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-01T02:45:33Z",
+  "generatedAt": "2026-11-08T02:51:21Z",
   "ticker": "ARMY",
   "name": "ARMY International Defense ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/army",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/ARMY-holdings-10302026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/ARMY-holdings-11062026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/ARMY",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-10-30)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-11-06)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": null
   },
   "nav": {
-    "display": "$23.77",
-    "value": 23.77,
-    "asOfDate": "Oct 30 2026"
+    "display": "$22.16",
+    "value": 22.16,
+    "asOfDate": "Nov 06 2026"
   },
   "marketPrice": {
-    "display": "$23.77",
-    "value": 23.77,
-    "asOfDate": "Oct 30 2026"
+    "display": "$22.17",
+    "value": 22.17,
+    "asOfDate": "Nov 06 2026"
   },
   "premiumDiscount": {
-    "display": "0.02%",
-    "value": 0.02
+    "display": "0.06%",
+    "value": 0.06
   },
   "aum": {
-    "display": "$12,835,451",
-    "value": 12835451,
-    "asOfDate": "Oct 30 2026",
+    "display": "$12,851,161",
+    "value": 12851161,
+    "asOfDate": "Nov 06 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -64,25 +64,25 @@
   "returns": {
     "derivedFrom": "Yahoo Finance adjusted-close total-return proxy; not official NAV total returns",
     "returnsBasis": "derived from Yahoo Finance adjusted close at the last completed month-end (total-return proxy estimate, not official Tema NAV total returns)",
-    "performanceAsOf": "2026-09-30",
+    "performanceAsOf": "2026-10-30",
     "monthEnd": {
-      "asOfDate": "Sep 30 2026",
-      "mo1": -9.61,
-      "qtd": -1.82,
-      "ytd": -2.94,
-      "yr1": -13.23,
+      "asOfDate": "Oct 30 2026",
+      "mo1": 2.73,
+      "qtd": 2.73,
+      "ytd": -0.29,
+      "yr1": -1.21,
       "yr3": null,
       "yr5": null,
       "yr10": null,
-      "sinceInception": -8.98,
-      "mo1Text": "-9.61%",
-      "qtdText": "-1.82%",
-      "ytdText": "-2.94%",
-      "yr1Text": "-13.23%",
+      "sinceInception": -6.05,
+      "mo1Text": "2.73%",
+      "qtdText": "2.73%",
+      "ytdText": "-0.29%",
+      "yr1Text": "-1.21%",
       "yr3Text": "—",
       "yr5Text": "—",
       "yr10Text": "—",
-      "sinceInceptionText": "-8.98%"
+      "sinceInceptionText": "-6.05%"
     },
     "quarterEnd": {
       "asOfDate": "Sep 30 2026",
@@ -120,16 +120,16 @@
     ],
     "pageSize": 250,
     "totalRows": 37,
-    "asOfDate": "2026-10-30",
-    "source": "Tema official daily holdings CSV (2026-10-30)"
+    "asOfDate": "2026-11-06",
+    "source": "Tema official daily holdings CSV (2026-11-06)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 277,
-    "asOfDate": "2026-10-30",
+    "totalRows": 282,
+    "asOfDate": "2026-11-06",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

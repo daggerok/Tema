@@ -2,7 +2,7 @@
   "ticker": "HLTH",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 73,
+  "totalRows": 78,
   "headers": [
     "Date",
     "NAV",
@@ -446,6 +446,36 @@
       "Date": "Oct 30 2026",
       "NAV": "",
       "Market Price": "28.67",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 02 2026",
+      "NAV": "",
+      "Market Price": "27.559999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 03 2026",
+      "NAV": "",
+      "Market Price": "28.09",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 04 2026",
+      "NAV": "",
+      "Market Price": "28.76",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 05 2026",
+      "NAV": "",
+      "Market Price": "26.73",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 06 2026",
+      "NAV": "",
+      "Market Price": "26.950001",
       "Premium/Discount": ""
     }
   ]

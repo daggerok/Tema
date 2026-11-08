@@ -2,7 +2,7 @@
   "ticker": "ICOM",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 7,
+  "totalRows": 12,
   "headers": [
     "Date",
     "NAV",
@@ -50,6 +50,36 @@
       "Date": "Oct 30 2026",
       "NAV": "",
       "Market Price": "24.780001",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 02 2026",
+      "NAV": "",
+      "Market Price": "24.389999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 03 2026",
+      "NAV": "",
+      "Market Price": "24.110001",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 04 2026",
+      "NAV": "",
+      "Market Price": "23.870001",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 05 2026",
+      "NAV": "",
+      "Market Price": "23.360001",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 06 2026",
+      "NAV": "",
+      "Market Price": "23.48",
       "Premium/Discount": ""
     }
   ]
