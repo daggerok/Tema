@@ -135,7 +135,9 @@ function nportClient(reportDate: string) {
   } };
 }
 
-const yahooFor = (payload: unknown, urls: string[] = []) => ({ fetch: async (input: string | URL) => { urls.push(String(input)); return okResponse(JSON.stringify(payload), 'application/json'); } });
+// the swing block's own chart request (period1=0, daily bars since listing) gets 300 daily closes from 2025-11-30
+const SWING_CHART = dailyChart('2025-11-30', 300);
+const yahooFor = (payload: unknown, urls: string[] = []) => ({ fetch: async (input: string | URL) => { urls.push(String(input)); return okResponse(JSON.stringify(String(input).includes('includePrePost=false') ? SWING_CHART : payload), 'application/json'); } });
 const downClient = { fetch: async () => new Response('unavailable', { status: 503 }) };
 const healthy = (tickers: string[], chart: unknown = dailyChart('2026-09-01', 29)) => ({ issuer: issuerFor(tickers), yahoo: yahooFor(chart), sec: downClient });
 
@@ -579,13 +581,20 @@ describe('pipeline', () => {
       const config = feedConfig(directory, { TICKERS: 'VOLT', EDGAR_FALLBACK: 'true' });
       let secRequests = 0;
       const sec = { fetch: async () => { secRequests += 1; return new Response('unexpected SEC request', { status: 403 }); } };
-      const clients = { ...healthy(['VOLT']), sec };
+      const yahooUrls: string[] = [];
+      const clients = { ...healthy(['VOLT']), yahoo: yahooFor(dailyChart('2026-09-01', 29), yahooUrls), sec };
       const first = await runUpdater(config, clients);
       expect(first).toMatchObject({ catalogCount: 1, selectedCount: 1, updatedCount: 1, failures: 0, holdings: 3, history: 29 });
       expect(secRequests).toBe(0);
       expect((await readIndex(directory)).funds[0]).toMatchObject({ ticker: 'VOLT', holdings: 3, history: 29, dataFile: './funds/VOLT/meta.json' });
       // the 52-week range keys from the published history pages (shared range-52w block)
       for (const row of (await readIndex(directory)).funds) expect(Object.keys(row.metrics)).toEqual(expect.arrayContaining(['week52Low', 'week52High', 'range52w', 'range52wClose', 'range52wAsOf', 'range52wSince', 'range52wBasis']));
+      // the swing keys from the Yahoo daily closes (period1=0) of the fund the run updated (swing block)
+      const SWING_KEYS = ['pctFrom52wHigh', 'athPrice', 'athDate', 'athBasis', 'pctFromAth', 'volatility1y', 'sigmaFromMean60d', 'high60d', 'low60d'];
+      for (const row of (await readIndex(directory)).funds) expect(Object.keys(row.metrics).slice(-11, -2)).toEqual(SWING_KEYS);
+      expect(yahooUrls.some((url) => /chart\/VOLT\?period1=0&period2=\d+&interval=1d&includePrePost=false/.test(url))).toBe(true);
+      const volt = (await readIndex(directory)).funds[0].metrics;
+      expect([volt.athBasis, volt.athPrice, volt.high60d, volt.volatility1y]).toEqual(['daily closes since 2025-11-30', 22.99, 22.99, expect.any(Number)]);
       const meta = await readMeta(directory, 'VOLT');
       expect(meta.holdings.pages).toEqual(['holdings/001.json']);
       expect(meta.source.holdingsDownload).toBe(csvUrlFor('VOLT'));
@@ -694,8 +703,9 @@ describe('pipeline 2', () => {
       const blank = funds.find((row: { ticker: string }) => row.ticker === 'BBB');
       expect(blank.dataFile).toBeNull();
       expect(Object.keys(blank.metrics)).toEqual(Object.keys(funds.find((row: { ticker: string }) => row.ticker === 'AAA').metrics));
-      // 13 metrics plus the seven 52-week range keys (shared range-52w block), all null without published history
-      expect(Object.values(blank.metrics).filter((value) => value === null)).toHaveLength(20);
+      // 13 metrics plus the seven 52-week range keys (shared range-52w block) and the nine swing keys (shared swing block), all
+      // null without published history
+      expect(Object.values(blank.metrics).filter((value) => value === null)).toHaveLength(29);
       expect(blank.metrics.returnsBasis).toBe(RETURNS_BASIS);
       const index = await readIndex(directory);
       index.funds = index.funds.filter((row: { ticker: string }) => row.ticker !== 'AAA');
@@ -1067,7 +1077,9 @@ describe('network 2', () => {
     await withFeed(async (directory) => {
       const urls: string[] = [];
       await runUpdater(feedConfig(directory, { TICKERS: 'VOLT', HISTORY_RANGE: '5y' }), { issuer: issuerFor(['VOLT']), yahoo: yahooFor(dailyChart('2026-09-01', 29), urls), sec: downClient });
-      const [period1, period2] = ['period1', 'period2'].map((name) => Number(new URL(urls[0]).searchParams.get(name)));
+      // the brand's own chart request, not the swing block's period1=0 one
+      const own = urls.find((url) => url.includes('/chart/VOLT') && !url.includes('includePrePost=false')) ?? '';
+      const [period1, period2] = ['period1', 'period2'].map((name) => Number(new URL(own).searchParams.get(name)));
       expect(period1).toBeGreaterThan(0);
       expect(Math.round((period2 - period1) / 86_400 / 365.25)).toBe(5);
     });
