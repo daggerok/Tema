@@ -74,6 +74,13 @@ Each fund carries a `metrics` object that powers the catalog columns shared with
 - `dividendYield` - 12-month trailing yield from observed Yahoo distributions when available
 - `dividendYieldBasis` - code for the definition behind `dividendYield`, `null` exactly when `dividendYield` is `null` (see the table below)
 - `secYield` - reserved for a published SEC-yield value; currently unavailable in the generated feed
+- Swing metrics (shared `swing` block, the formulas of the Stocks feed) from the Yahoo Finance daily closes since listing (chart API, split-adjusted, not dividend-adjusted; the published NAV and market price history is not split-adjusted), with the last close as the price. Read for every fund the run updates; a failed chart, or one that starts more than 31 days after the published history, keeps the published values; `null` (never `0`) when the history is too short:
+  - `pctFrom52wHigh` - last close against the highest close of the last 52 weeks, in percent
+  - `athPrice`, `athDate`, `athBasis` - highest close of the whole history, its date and the history it covers (`daily closes since <first date>`)
+  - `pctFromAth` - last close against `athPrice`, in percent
+  - `volatility1y` - annualized volatility of the last 252 daily log returns, in percent (needs 253 closes)
+  - `sigmaFromMean60d` - distance of the last close from the mean of the last 60 closes, in sample standard deviations
+  - `high60d`, `low60d` - highest and lowest of the last 60 closes
 - `returnsBasis` - mandatory non-empty text saying how the returns are computed: here always Yahoo Finance adjusted close at the last completed month-end (an estimate, not official Tema NAV total returns)
 - `performanceAsOf` - mandatory ISO `YYYY-MM-DD` date the returns are as of: the Yahoo close date of that month-end anchor (not the NAV date), `null` only when no price history exists
 
