@@ -136,7 +136,10 @@ function nportClient(reportDate: string) {
 }
 
 // the swing block's own chart request (period1=0, daily bars since listing) gets 300 daily closes from 2025-11-30
-const SWING_CHART = dailyChart('2025-11-30', 300);
+// and one distribution of 0.25 on its last day; the chart starts at the listing (dividends block, read from this same request)
+const SWING_LAST = epoch('2025-11-30') + 299 * 86_400;
+const SWING_CHART = dailyChart('2025-11-30', 300, { [String(SWING_LAST)]: { date: SWING_LAST, amount: 0.25 } });
+Object.assign(SWING_CHART.chart.result[0].meta, { dataGranularity: '1d', firstTradeDate: epoch('2025-11-30') });
 const yahooFor = (payload: unknown, urls: string[] = []) => ({ fetch: async (input: string | URL) => { urls.push(String(input)); return okResponse(JSON.stringify(String(input).includes('includePrePost=false') ? SWING_CHART : payload), 'application/json'); } });
 const downClient = { fetch: async () => new Response('unavailable', { status: 503 }) };
 const healthy = (tickers: string[], chart: unknown = dailyChart('2026-09-01', 29)) => ({ issuer: issuerFor(tickers), yahoo: yahooFor(chart), sec: downClient });
@@ -591,8 +594,14 @@ describe('pipeline', () => {
       for (const row of (await readIndex(directory)).funds) expect(Object.keys(row.metrics)).toEqual(expect.arrayContaining(['week52Low', 'week52High', 'range52w', 'range52wClose', 'range52wAsOf', 'range52wSince', 'range52wBasis']));
       // the swing keys from the Yahoo daily closes (period1=0) of the fund the run updated (swing block)
       const SWING_KEYS = ['pctFrom52wHigh', 'athPrice', 'athDate', 'athBasis', 'pctFromAth', 'volatility1y', 'sigmaFromMean60d', 'high60d', 'low60d'];
-      for (const row of (await readIndex(directory)).funds) expect(Object.keys(row.metrics).slice(-11, -2)).toEqual(SWING_KEYS);
-      expect(yahooUrls.some((url) => /chart\/VOLT\?period1=0&period2=\d+&interval=1d&includePrePost=false/.test(url))).toBe(true);
+      for (const row of (await readIndex(directory)).funds) expect(Object.keys(row.metrics).slice(-17, -8)).toEqual(SWING_KEYS);
+      // the six dividend keys of the dividends block follow them, read from the same Yahoo request (no extra one): exactly one per updated fund
+      const DIVIDEND_KEYS = ['dividendRate', 'dividendGrowth', 'dividendGrowth3y', 'dividendGrowth5y', 'dividendStreak', 'dividendCut10y'];
+      for (const row of (await readIndex(directory)).funds) expect(Object.keys(row.metrics).slice(-8, -2)).toEqual(DIVIDEND_KEYS);
+      expect(yahooUrls.filter((url) => /chart\/VOLT\?period1=0&period2=\d+&interval=1d&includePrePost=false/.test(url))).toHaveLength(1);
+      // dividendRate 0.25, the five growth keys null (never 0)
+      const dividendRow = (await readIndex(directory)).funds[0].metrics;
+      expect(DIVIDEND_KEYS.map((key) => dividendRow[key])).toEqual([0.25, null, null, null, null, null]);
       const volt = (await readIndex(directory)).funds[0].metrics;
       expect([volt.athBasis, volt.athPrice, volt.high60d, volt.volatility1y]).toEqual(['daily closes since 2025-11-30', 22.99, 22.99, expect.any(Number)]);
       const meta = await readMeta(directory, 'VOLT');
@@ -703,9 +712,9 @@ describe('pipeline 2', () => {
       const blank = funds.find((row: { ticker: string }) => row.ticker === 'BBB');
       expect(blank.dataFile).toBeNull();
       expect(Object.keys(blank.metrics)).toEqual(Object.keys(funds.find((row: { ticker: string }) => row.ticker === 'AAA').metrics));
-      // 13 metrics plus the seven 52-week range keys (shared range-52w block) and the nine swing keys (shared swing block), all
+      // 13 metrics plus the seven 52-week range keys (shared range-52w block) and the nine swing keys (shared swing block) and the six dividend keys (shared dividends block), all
       // null without published history
-      expect(Object.values(blank.metrics).filter((value) => value === null)).toHaveLength(29);
+      expect(Object.values(blank.metrics).filter((value) => value === null)).toHaveLength(35);
       expect(blank.metrics.returnsBasis).toBe(RETURNS_BASIS);
       const index = await readIndex(directory);
       index.funds = index.funds.filter((row: { ticker: string }) => row.ticker !== 'AAA');
