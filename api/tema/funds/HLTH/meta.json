@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T02:51:26Z",
+  "generatedAt": "2026-11-15T09:36:37Z",
   "ticker": "HLTH",
   "name": "HLTH Healthcare AI ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/hlth",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/HLTH-holdings-11062026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/HLTH-holdings-11132026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/HLTH",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-11-06)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-11-13)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$26.92",
-    "value": 26.92,
-    "asOfDate": "Nov 06 2026"
+    "display": "$26.06",
+    "value": 26.06,
+    "asOfDate": "Nov 13 2026"
   },
   "marketPrice": {
-    "display": "$26.95",
-    "value": 26.95,
-    "asOfDate": "Nov 06 2026"
+    "display": "$26.09",
+    "value": 26.09,
+    "asOfDate": "Nov 13 2026"
   },
   "premiumDiscount": {
-    "display": "0.11%",
-    "value": 0.11
+    "display": "0.13%",
+    "value": 0.13
   },
   "aum": {
-    "display": "$11,306,305",
-    "value": 11306305,
-    "asOfDate": "Nov 06 2026",
+    "display": "$10,945,407",
+    "value": 10945407,
+    "asOfDate": "Nov 13 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -120,16 +120,16 @@
     ],
     "pageSize": 250,
     "totalRows": 33,
-    "asOfDate": "2026-11-06",
-    "source": "Tema official daily holdings CSV (2026-11-06)"
+    "asOfDate": "2026-11-13",
+    "source": "Tema official daily holdings CSV (2026-11-13)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 78,
-    "asOfDate": "2026-11-06",
+    "totalRows": 83,
+    "asOfDate": "2026-11-13",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

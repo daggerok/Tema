@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T02:51:25Z",
+  "generatedAt": "2026-11-15T09:36:36Z",
   "ticker": "DSPY",
   "name": "DSPY S&P 500 Historical Weight ETF Strategy",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/dspy",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/DSPY-holdings-11062026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/DSPY-holdings-11132026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/DSPY",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-11-06)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-11-13)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,28 +31,28 @@
     "net": 0.18
   },
   "nav": {
-    "display": "$64.15",
-    "value": 64.15,
-    "asOfDate": "Nov 06 2026"
+    "display": "$66.07",
+    "value": 66.07,
+    "asOfDate": "Nov 13 2026"
   },
   "marketPrice": {
-    "display": "$64.19",
-    "value": 64.19,
-    "asOfDate": "Nov 06 2026"
+    "display": "$66.10",
+    "value": 66.1,
+    "asOfDate": "Nov 13 2026"
   },
   "premiumDiscount": {
-    "display": "0.06%",
-    "value": 0.06
+    "display": "0.05%",
+    "value": 0.05
   },
   "aum": {
-    "display": "$986,609,554",
-    "value": 986609554,
-    "asOfDate": "Nov 06 2026",
+    "display": "$1,016,103,869",
+    "value": 1016103869,
+    "asOfDate": "Nov 13 2026",
     "source": "Tema official fund page"
   },
   "yields": {
-    "dividendYield": 0.96,
-    "dividendYieldText": "0.96%",
+    "dividendYield": 0.93,
+    "dividendYieldText": "0.93%",
     "dividendYieldBasis": "computed-trailing-12m",
     "dividendYieldKind": "Trailing 12-month Yahoo Finance chart distributions divided by latest market price",
     "distributionRate": null,
@@ -146,17 +146,17 @@
       "holdings/003.json"
     ],
     "pageSize": 250,
-    "totalRows": 505,
-    "asOfDate": "2026-11-06",
-    "source": "Tema official daily holdings CSV (2026-11-06)"
+    "totalRows": 506,
+    "asOfDate": "2026-11-13",
+    "source": "Tema official daily holdings CSV (2026-11-13)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 403,
-    "asOfDate": "2026-11-06",
+    "totalRows": 408,
+    "asOfDate": "2026-11-13",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

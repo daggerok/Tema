@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T02:51:33Z",
+  "generatedAt": "2026-11-15T09:36:44Z",
   "ticker": "TOLL",
   "name": "TOLL Durable Quality ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/toll",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/TOLL-holdings-11062026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/TOLL-holdings-11132026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/TOLL",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-11-06)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-11-13)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,28 +31,28 @@
     "net": 0.55
   },
   "nav": {
-    "display": "$38.85",
-    "value": 38.85,
-    "asOfDate": "Nov 06 2026"
+    "display": "$40.33",
+    "value": 40.33,
+    "asOfDate": "Nov 13 2026"
   },
   "marketPrice": {
-    "display": "$38.84",
-    "value": 38.84,
-    "asOfDate": "Nov 06 2026"
+    "display": "$40.62",
+    "value": 40.62,
+    "asOfDate": "Nov 13 2026"
   },
   "premiumDiscount": {
-    "display": "-0.03%",
-    "value": -0.03
+    "display": "0.73%",
+    "value": 0.73
   },
   "aum": {
-    "display": "$33,801,849",
-    "value": 33801849,
-    "asOfDate": "Nov 06 2026",
+    "display": "$35,084,638",
+    "value": 35084638,
+    "asOfDate": "Nov 13 2026",
     "source": "Tema official fund page"
   },
   "yields": {
-    "dividendYield": 0.29,
-    "dividendYieldText": "0.29%",
+    "dividendYield": 0.28,
+    "dividendYieldText": "0.28%",
     "dividendYieldBasis": "computed-trailing-12m",
     "dividendYieldKind": "Trailing 12-month Yahoo Finance chart distributions divided by latest market price",
     "distributionRate": null,
@@ -133,16 +133,16 @@
     ],
     "pageSize": 250,
     "totalRows": 38,
-    "asOfDate": "2026-11-06",
-    "source": "Tema official daily holdings CSV (2026-11-06)"
+    "asOfDate": "2026-11-13",
+    "source": "Tema official daily holdings CSV (2026-11-13)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 877,
-    "asOfDate": "2026-11-06",
+    "totalRows": 882,
+    "asOfDate": "2026-11-13",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }
