@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T09:36:40Z",
+  "generatedAt": "2026-11-19T09:05:34Z",
   "ticker": "LAZR",
   "name": "LAZR Photonics & Optical ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/lazr",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/LAZR-holdings-11132026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/LAZR-holdings-11172026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/LAZR",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-11-13)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-11-17)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$29.36",
-    "value": 29.36,
-    "asOfDate": "Nov 13 2026"
+    "display": "$26.86",
+    "value": 26.86,
+    "asOfDate": "Nov 17 2026"
   },
   "marketPrice": {
-    "display": "$29.25",
-    "value": 29.25,
-    "asOfDate": "Nov 13 2026"
+    "display": "$26.87",
+    "value": 26.87,
+    "asOfDate": "Nov 17 2026"
   },
   "premiumDiscount": {
-    "display": "-0.36%",
-    "value": -0.36
+    "display": "0.05%",
+    "value": 0.05
   },
   "aum": {
-    "display": "$140,024,699",
-    "value": 140024699,
-    "asOfDate": "Nov 13 2026",
+    "display": "$154,967,951",
+    "value": 154967951,
+    "asOfDate": "Nov 17 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -120,16 +120,16 @@
     ],
     "pageSize": 250,
     "totalRows": 25,
-    "asOfDate": "2026-11-13",
-    "source": "Tema official daily holdings CSV (2026-11-13)"
+    "asOfDate": "2026-11-17",
+    "source": "Tema official daily holdings CSV (2026-11-17)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 97,
-    "asOfDate": "2026-11-13",
+    "totalRows": 100,
+    "asOfDate": "2026-11-18",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

@@ -2,7 +2,7 @@
   "ticker": "PSOX",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 64,
+  "totalRows": 67,
   "headers": [
     "Date",
     "NAV",
@@ -392,6 +392,24 @@
       "Date": "Nov 13 2026",
       "NAV": "",
       "Market Price": "33.139999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 16 2026",
+      "NAV": "",
+      "Market Price": "30.02",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 17 2026",
+      "NAV": "",
+      "Market Price": "29.24",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 18 2026",
+      "NAV": "",
+      "Market Price": "29.6",
       "Premium/Discount": ""
     }
   ]

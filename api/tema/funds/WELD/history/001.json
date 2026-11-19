@@ -2,7 +2,7 @@
   "ticker": "WELD",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 882,
+  "totalRows": 885,
   "headers": [
     "Date",
     "NAV",
@@ -5300,6 +5300,24 @@
       "Date": "Nov 13 2026",
       "NAV": "",
       "Market Price": "49.271999",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 16 2026",
+      "NAV": "",
+      "Market Price": "47.923",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 17 2026",
+      "NAV": "",
+      "Market Price": "47.52",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 18 2026",
+      "NAV": "",
+      "Market Price": "47.887001",
       "Premium/Discount": ""
     }
   ]
