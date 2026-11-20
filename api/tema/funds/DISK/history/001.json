@@ -2,7 +2,7 @@
   "ticker": "DISK",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 100,
+  "totalRows": 102,
   "headers": [
     "Date",
     "NAV",
@@ -608,6 +608,18 @@
       "Date": "Nov 18 2026",
       "NAV": "",
       "Market Price": "21.83",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 19 2026",
+      "NAV": "",
+      "Market Price": "21.33",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 20 2026",
+      "NAV": "",
+      "Market Price": "18.459999",
       "Premium/Discount": ""
     }
   ]
