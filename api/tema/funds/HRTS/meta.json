@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-20T22:21:19Z",
+  "generatedAt": "2026-11-25T05:45:45Z",
   "ticker": "HRTS",
   "name": "HRTS Heart & Health ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/hrts",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/HRTS-holdings-11192026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/HRTS-holdings-11232026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/HRTS",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-11-19)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-11-23)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,28 +31,28 @@
     "net": null
   },
   "nav": {
-    "display": "$37.18",
-    "value": 37.18,
-    "asOfDate": "Nov 19 2026"
+    "display": "$37.72",
+    "value": 37.72,
+    "asOfDate": "Nov 23 2026"
   },
   "marketPrice": {
-    "display": "$37.17",
-    "value": 37.17,
-    "asOfDate": "Nov 19 2026"
+    "display": "$37.57",
+    "value": 37.57,
+    "asOfDate": "Nov 23 2026"
   },
   "premiumDiscount": {
-    "display": "-0.02%",
-    "value": -0.02
+    "display": "-0.41%",
+    "value": -0.41
   },
   "aum": {
-    "display": "$55,020,506",
-    "value": 55020506,
-    "asOfDate": "Nov 19 2026",
+    "display": "$55,831,752",
+    "value": 55831752,
+    "asOfDate": "Nov 23 2026",
     "source": "Tema official fund page"
   },
   "yields": {
-    "dividendYield": 1.29,
-    "dividendYieldText": "1.29%",
+    "dividendYield": 1.21,
+    "dividendYieldText": "1.21%",
     "dividendYieldBasis": "computed-trailing-12m",
     "dividendYieldKind": "Trailing 12-month Yahoo Finance chart distributions divided by latest market price",
     "distributionRate": null,
@@ -129,16 +129,16 @@
     ],
     "pageSize": 250,
     "totalRows": 46,
-    "asOfDate": "2026-11-19",
-    "source": "Tema official daily holdings CSV (2026-11-19)"
+    "asOfDate": "2026-11-23",
+    "source": "Tema official daily holdings CSV (2026-11-23)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 753,
-    "asOfDate": "2026-11-20",
+    "totalRows": 755,
+    "asOfDate": "2026-11-24",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

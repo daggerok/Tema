@@ -2,7 +2,7 @@
   "ticker": "THRU",
   "page": 1,
   "pageSize": 1000,
-  "totalRows": 21,
+  "totalRows": 24,
   "headers": [
     "Date",
     "NAV",
@@ -134,6 +134,24 @@
       "Date": "Nov 19 2026",
       "NAV": "",
       "Market Price": "23.610001",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 20 2026",
+      "NAV": "",
+      "Market Price": "23.030001",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 23 2026",
+      "NAV": "",
+      "Market Price": "23.24",
+      "Premium/Discount": ""
+    },
+    {
+      "Date": "Nov 24 2026",
+      "NAV": "",
+      "Market Price": "23.309999",
       "Premium/Discount": ""
     }
   ]

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-20T22:21:15Z",
+  "generatedAt": "2026-11-25T05:45:40Z",
   "ticker": "DICE",
   "name": "DICE Trading & Prediction Markets ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/dice",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/DICE-holdings-11192026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/DICE-holdings-11232026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/DICE",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-11-19)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-11-23)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$19.80",
-    "value": 19.8,
-    "asOfDate": "Nov 19 2026"
+    "display": "$19.69",
+    "value": 19.69,
+    "asOfDate": "Nov 23 2026"
   },
   "marketPrice": {
-    "display": "$19.78",
-    "value": 19.78,
-    "asOfDate": "Nov 19 2026"
+    "display": "$19.74",
+    "value": 19.74,
+    "asOfDate": "Nov 23 2026"
   },
   "premiumDiscount": {
-    "display": "-0.13%",
-    "value": -0.13
+    "display": "0.24%",
+    "value": 0.24
   },
   "aum": {
     "display": "—",
     "value": null,
-    "asOfDate": "Nov 19 2026",
+    "asOfDate": "Nov 23 2026",
     "source": null
   },
   "yields": {
@@ -120,16 +120,16 @@
     ],
     "pageSize": 250,
     "totalRows": 39,
-    "asOfDate": "2026-11-19",
-    "source": "Tema official daily holdings CSV (2026-11-19)"
+    "asOfDate": "2026-11-23",
+    "source": "Tema official daily holdings CSV (2026-11-23)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 53,
-    "asOfDate": "2026-11-20",
+    "totalRows": 55,
+    "asOfDate": "2026-11-24",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }
