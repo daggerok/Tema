@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-25T05:45:49Z",
+  "generatedAt": "2026-11-25T23:15:40Z",
   "ticker": "PSOX",
   "name": "PSOX MLCC & PowerSemi ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/psox",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/PSOX-holdings-11232026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/PSOX-holdings-11242026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/PSOX",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-11-23)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-11-24)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$28.01",
-    "value": 28.01,
-    "asOfDate": "Nov 23 2026"
+    "display": "$28.80",
+    "value": 28.8,
+    "asOfDate": "Nov 24 2026"
   },
   "marketPrice": {
-    "display": "$29.54",
-    "value": 29.54,
-    "asOfDate": "Nov 23 2026"
+    "display": "$27.63",
+    "value": 27.63,
+    "asOfDate": "Nov 24 2026"
   },
   "premiumDiscount": {
-    "display": "5.46%",
-    "value": 5.46
+    "display": "-4.06%",
+    "value": -4.06
   },
   "aum": {
-    "display": "$2,240,849",
-    "value": 2240849,
-    "asOfDate": "Nov 23 2026",
+    "display": "$2,303,852",
+    "value": 2303852,
+    "asOfDate": "Nov 24 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -120,16 +120,16 @@
     ],
     "pageSize": 250,
     "totalRows": 22,
-    "asOfDate": "2026-11-23",
-    "source": "Tema official daily holdings CSV (2026-11-23)"
+    "asOfDate": "2026-11-24",
+    "source": "Tema official daily holdings CSV (2026-11-24)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 71,
-    "asOfDate": "2026-11-24",
+    "totalRows": 72,
+    "asOfDate": "2026-11-25",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

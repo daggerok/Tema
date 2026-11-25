@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-25T05:45:42Z",
+  "generatedAt": "2026-11-25T23:15:34Z",
   "ticker": "DSPY",
   "name": "DSPY S&P 500 Historical Weight ETF Strategy",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/dspy",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/DSPY-holdings-11232026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/DSPY-holdings-11242026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/DSPY",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-11-23)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-11-24)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.18
   },
   "nav": {
-    "display": "$63.20",
-    "value": 63.2,
-    "asOfDate": "Nov 23 2026"
+    "display": "$63.03",
+    "value": 63.03,
+    "asOfDate": "Nov 24 2026"
   },
   "marketPrice": {
-    "display": "$63.24",
-    "value": 63.24,
-    "asOfDate": "Nov 23 2026"
+    "display": "$63.08",
+    "value": 63.08,
+    "asOfDate": "Nov 24 2026"
   },
   "premiumDiscount": {
-    "display": "0.07%",
-    "value": 0.07
+    "display": "0.08%",
+    "value": 0.08
   },
   "aum": {
-    "display": "$973,194,538",
-    "value": 973194538,
-    "asOfDate": "Nov 23 2026",
+    "display": "$974,362,797",
+    "value": 974362797,
+    "asOfDate": "Nov 24 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -147,16 +147,16 @@
     ],
     "pageSize": 250,
     "totalRows": 506,
-    "asOfDate": "2026-11-23",
-    "source": "Tema official daily holdings CSV (2026-11-23)"
+    "asOfDate": "2026-11-24",
+    "source": "Tema official daily holdings CSV (2026-11-24)"
   },
   "history": {
     "pages": [
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 415,
-    "asOfDate": "2026-11-24",
+    "totalRows": 416,
+    "asOfDate": "2026-11-25",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }
