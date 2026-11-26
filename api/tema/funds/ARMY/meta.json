@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-25T23:15:30Z",
+  "generatedAt": "2026-11-26T21:54:05Z",
   "ticker": "ARMY",
   "name": "ARMY International Defense ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/army",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/ARMY-holdings-11242026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/ARMY-holdings-11252026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/ARMY",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-11-24)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-11-25)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": null
   },
   "nav": {
-    "display": "$20.92",
-    "value": 20.92,
-    "asOfDate": "Nov 24 2026"
+    "display": "$20.84",
+    "value": 20.84,
+    "asOfDate": "Nov 25 2026"
   },
   "marketPrice": {
-    "display": "$20.99",
-    "value": 20.99,
-    "asOfDate": "Nov 24 2026"
+    "display": "$21.08",
+    "value": 21.08,
+    "asOfDate": "Nov 25 2026"
   },
   "premiumDiscount": {
-    "display": "0.36%",
-    "value": 0.36
+    "display": "1.15%",
+    "value": 1.15
   },
   "aum": {
-    "display": "$12,130,797",
-    "value": 12130797,
-    "asOfDate": "Nov 24 2026",
+    "display": "$12,086,052",
+    "value": 12086052,
+    "asOfDate": "Nov 25 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -120,8 +120,8 @@
     ],
     "pageSize": 250,
     "totalRows": 37,
-    "asOfDate": "2026-11-24",
-    "source": "Tema official daily holdings CSV (2026-11-24)"
+    "asOfDate": "2026-11-25",
+    "source": "Tema official daily holdings CSV (2026-11-25)"
   },
   "history": {
     "pages": [
