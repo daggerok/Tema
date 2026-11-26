@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-25T23:15:40Z",
+  "generatedAt": "2026-11-26T06:01:40Z",
   "ticker": "THRU",
   "name": "Tema Commodity Infrastructure ETF",
   "category": "Equity",
@@ -85,8 +85,8 @@
       "sinceInceptionText": "—"
     },
     "quarterEnd": {
-      "asOfDate": "Nov 24 2026",
-      "mo1": -8.37,
+      "asOfDate": "Nov 25 2026",
+      "mo1": -7.11,
       "qtd": null,
       "ytd": null,
       "yr1": null,
@@ -94,7 +94,7 @@
       "yr5": null,
       "yr10": null,
       "sinceInception": null,
-      "mo1Text": "-8.37%",
+      "mo1Text": "-7.11%",
       "qtdText": "—",
       "ytdText": "—",
       "yr1Text": "—",
@@ -128,8 +128,8 @@
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 24,
-    "asOfDate": "2026-11-24",
+    "totalRows": 25,
+    "asOfDate": "2026-11-25",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }

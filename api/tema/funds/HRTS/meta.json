@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-25T23:15:36Z",
+  "generatedAt": "2026-11-26T06:01:35Z",
   "ticker": "HRTS",
   "name": "HRTS Heart & Health ETF",
   "category": "Equity",
@@ -128,7 +128,7 @@
       "holdings/001.json"
     ],
     "pageSize": 250,
-    "totalRows": 46,
+    "totalRows": 45,
     "asOfDate": "2026-11-24",
     "source": "Tema official daily holdings CSV (2026-11-24)"
   },
