@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-26T21:54:17Z",
+  "generatedAt": "2026-11-27T22:53:56Z",
   "ticker": "VOLT",
   "name": "VOLT Electrification ETF",
   "category": "Equity",
@@ -51,8 +51,8 @@
     "source": "Tema official fund page"
   },
   "yields": {
-    "dividendYield": 0.42,
-    "dividendYieldText": "0.42%",
+    "dividendYield": 0.41,
+    "dividendYieldText": "0.41%",
     "dividendYieldBasis": "computed-trailing-12m",
     "dividendYieldKind": "Trailing 12-month Yahoo Finance chart distributions divided by latest market price",
     "distributionRate": null,
@@ -137,8 +137,8 @@
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 495,
-    "asOfDate": "2026-11-25",
+    "totalRows": 496,
+    "asOfDate": "2026-11-27",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }
