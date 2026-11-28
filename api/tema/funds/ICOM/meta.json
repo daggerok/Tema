@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-28T03:32:47Z",
+  "generatedAt": "2026-11-28T13:01:09Z",
   "ticker": "ICOM",
   "name": "Tema Commodity Income ETF",
   "category": "Equity",
@@ -7,10 +7,10 @@
   "source": {
     "fundPage": "https://temaetfs.com/icom",
     "catalog": "https://temaetfs.com/funds",
-    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/ICOM-holdings-11252026.csv",
+    "holdingsDownload": "https://temaetfs.com/hubfs/Website/Holdings/ICOM-holdings-11272026.csv",
     "yahooChart": "https://query1.finance.yahoo.com/v8/finance/chart/ICOM",
     "nportFiling": null,
-    "holdingsSource": "Tema official daily holdings CSV (2026-11-25)",
+    "holdingsSource": "Tema official daily holdings CSV (2026-11-27)",
     "historySource": "Yahoo Finance public chart history (adjusted close used for total-return estimates)",
     "provider": "Tema ETFs official fund pages and holdings CSVs + SEC EDGAR Form N-PORT-P (Tema ETF Trust, CIK 0001944285; holdings fallback only) + Yahoo Finance public chart API"
   },
@@ -31,23 +31,23 @@
     "net": 0.75
   },
   "nav": {
-    "display": "$21.41",
-    "value": 21.41,
-    "asOfDate": "Nov 25 2026"
+    "display": "$22.24",
+    "value": 22.24,
+    "asOfDate": "Nov 27 2026"
   },
   "marketPrice": {
-    "display": "$21.66",
-    "value": 21.66,
-    "asOfDate": "Nov 25 2026"
+    "display": "$22.34",
+    "value": 22.34,
+    "asOfDate": "Nov 27 2026"
   },
   "premiumDiscount": {
-    "display": "1.17%",
-    "value": 1.17
+    "display": "0.43%",
+    "value": 0.43
   },
   "aum": {
-    "display": "$642,269",
-    "value": 642269,
-    "asOfDate": "Nov 25 2026",
+    "display": "$667,337",
+    "value": 667337,
+    "asOfDate": "Nov 27 2026",
     "source": "Tema official fund page"
   },
   "yields": {
@@ -120,8 +120,8 @@
     ],
     "pageSize": 250,
     "totalRows": 35,
-    "asOfDate": "2026-11-25",
-    "source": "Tema official daily holdings CSV (2026-11-25)"
+    "asOfDate": "2026-11-27",
+    "source": "Tema official daily holdings CSV (2026-11-27)"
   },
   "history": {
     "pages": [
