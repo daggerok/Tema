@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-26T21:54:08Z",
+  "generatedAt": "2026-11-28T03:32:44Z",
   "ticker": "DSPY",
   "name": "DSPY S&P 500 Historical Weight ETF Strategy",
   "category": "Equity",
@@ -51,8 +51,8 @@
     "source": "Tema official fund page"
   },
   "yields": {
-    "dividendYield": 0.98,
-    "dividendYieldText": "0.98%",
+    "dividendYield": 0.97,
+    "dividendYieldText": "0.97%",
     "dividendYieldBasis": "computed-trailing-12m",
     "dividendYieldKind": "Trailing 12-month Yahoo Finance chart distributions divided by latest market price",
     "distributionRate": null,
@@ -155,8 +155,8 @@
       "history/001.json"
     ],
     "pageSize": 1000,
-    "totalRows": 416,
-    "asOfDate": "2026-11-25",
+    "totalRows": 417,
+    "asOfDate": "2026-11-27",
     "source": "Yahoo Finance public chart history (adjusted close used for total-return estimates)"
   }
 }
